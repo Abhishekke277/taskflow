@@ -4,6 +4,7 @@ from backend.database import Base, engine
 from backend import models  # noqa: F401
 from backend.routers import users, projects, tasks
 from backend.middleware.logging_middleware import LoggingMiddleware
+from backend.algorithms.routes import router as algorithms_router
 
 Base.metadata.create_all(bind=engine)
 
@@ -27,6 +28,7 @@ app.add_middleware(
 app.include_router(users.router)
 app.include_router(projects.router)
 app.include_router(tasks.router)
+app.include_router(algorithms_router)
 
 
 @app.get("/")
