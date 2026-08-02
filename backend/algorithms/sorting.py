@@ -1,85 +1,45 @@
-"""
-Insertion Sort implementation with optional comparison counter.
-
-Complexity:
-  Best case  : O(n)   — already-sorted input; inner while never executes.
-  Average    : O(n²)  — each element shifts past ~half the sorted prefix.
-  Worst case : O(n²)  — reverse-sorted input; every element shifts all the way.
-  Space      : O(1)   — in-place, only a constant amount of extra memory.
-"""
-
-from typing import Any
-
-
-def insertion_sort(items: list[Any], key: str | None = None, reverse: bool = False) -> list[Any]:
+def insertion_sort(records, key):
     """
-    Sort *items* in-place using insertion sort and return the sorted list.
+    Sorts a list of dictionaries in place by the value at record[key],
+    using the standard insertion-sort algorithm: starting from the
+    second element, comparing against previous elements, and shifting
+    elements to insert each one into its correct position.
 
-    Args:
-        items:   List of dicts (or objects) to sort.
-        key:     Attribute/key name to sort by. If None, items are compared directly.
-        reverse: If True, sort in descending order.
+    Mutates `records` directly. No return value needed.
     """
-    arr = list(items)  # work on a copy so callers keep original order if needed
-
-    def get_val(item: Any) -> Any:
-        if key is None:
-            return item
-        return item[key] if isinstance(item, dict) else getattr(item, key)
-
-    for i in range(1, len(arr)):
-        current = arr[i]
+    for i in range(1, len(records)):
+        current = records[i]
         j = i - 1
-        if not reverse:
-            while j >= 0 and get_val(arr[j]) > get_val(current):
-                arr[j + 1] = arr[j]
-                j -= 1
-        else:
-            while j >= 0 and get_val(arr[j]) < get_val(current):
-                arr[j + 1] = arr[j]
-                j -= 1
-        arr[j + 1] = current
 
-    return arr
+        # Shift elements greater than current one position to the right
+        while j >= 0 and records[j][key] > current[key]:
+            records[j + 1] = records[j]
+            j -= 1
+
+        records[j + 1] = current
 
 
-def insertion_sort_count(
-    items: list[Any], key: str | None = None, reverse: bool = False
-) -> tuple[list[Any], int]:
+def insertion_sort_count(records, key):
     """
-    Same as insertion_sort but also returns the number of comparisons made.
-    Used by benchmark.py to measure algorithmic work empirically.
-
-    Returns:
-        (sorted_list, comparison_count)
+    Identical logic to insertion_sort — sorts `records` in place by
+    record[key] — but returns only a single integer: the number of
+    comparisons performed. Used for the Task 5 benchmark, not for
+    the live endpoints.
     """
-    arr = list(items)
-    comparisons = 0
+    comparison_count = 0
 
-    def get_val(item: Any) -> Any:
-        if key is None:
-            return item
-        return item[key] if isinstance(item, dict) else getattr(item, key)
-
-    for i in range(1, len(arr)):
-        current = arr[i]
+    for i in range(1, len(records)):
+        current = records[i]
         j = i - 1
-        if not reverse:
-            while j >= 0:
-                comparisons += 1
-                if get_val(arr[j]) > get_val(current):
-                    arr[j + 1] = arr[j]
-                    j -= 1
-                else:
-                    break
-        else:
-            while j >= 0:
-                comparisons += 1
-                if get_val(arr[j]) < get_val(current):
-                    arr[j + 1] = arr[j]
-                    j -= 1
-                else:
-                    break
-        arr[j + 1] = current
 
-    return arr, comparisons
+        while j >= 0:
+            comparison_count += 1  # counts the comparison in the while condition
+            if records[j][key] > current[key]:
+                records[j + 1] = records[j]
+                j -= 1
+            else:
+                break
+
+        records[j + 1] = current
+
+    return comparison_count
