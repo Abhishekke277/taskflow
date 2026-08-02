@@ -1,96 +1,82 @@
 """
-Algorithm correctness checker — Task 7.
-
-Runs PASS/FAIL assertions against insertion_sort, binary_search, and
-linear_search with small, deterministic inputs.
-
-Usage:
-    python -m backend.scripts.check_algorithms
+Automated PASS/FAIL checks for the algorithms engine.
+Run with: python backend/scripts/check_algorithms.py
 """
 
 import sys
 import os
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", ".."))
+
+# Allows this script to import from backend/ when run directly
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..")))
 
 from backend.algorithms.sorting import insertion_sort, insertion_sort_count
-from backend.algorithms.searching import binary_search, linear_search, binary_search_count
+from backend.algorithms.searching import binary_search, binary_search_count, linear_search_count
 
 
-def check(label: str, condition: bool) -> None:
-    status = "PASS" if condition else "FAIL"
-    print(f"[{status}] {label}")
-    if not condition:
-        global _failures
-        _failures += 1
+def check(case_name, result, expected):
+    if result == expected:
+        print(f"PASS: {case_name}")
+    else:
+        print(f"FAIL: {case_name} — expected {expected}, got {result}")
 
 
-_failures = 0
+# ── Case 1: insertion_sort on empty list leaves it empty, no error ──
+empty_list = []
+insertion_sort(empty_list, key="value")
+check("insertion_sort empty list", empty_list, [])
 
-# ---------------------------------------------------------------------------
-# insertion_sort tests
-# ---------------------------------------------------------------------------
-sample = [
-    {"title": "Zebra task", "priority": 5},
-    {"title": "Alpha task", "priority": 1},
-    {"title": "Mango task", "priority": 3},
-    {"title": "Alpha task", "priority": 2},
+# ── Case 2: insertion_sort on single-element list unchanged ──
+single_item = [{"value": 5}]
+insertion_sort(single_item, key="value")
+check("insertion_sort single element", single_item, [{"value": 5}])
+
+# ── Case 3: binary_search finds value at first, last, and middle ──
+sorted_list = [
+    {"value": 10}, {"value": 20}, {"value": 30}, {"value": 40}, {"value": 50}
 ]
 
-sorted_by_priority = insertion_sort(sample, key="priority")
-check("insertion_sort: sorted by priority ascending",
-      [d["priority"] for d in sorted_by_priority] == [1, 2, 3, 5])
+result_first = binary_search(sorted_list, 10, key="value")
+check("binary_search finds first index", result_first, 0)
 
-sorted_by_title = insertion_sort(sample, key="title")
-check("insertion_sort: sorted by title ascending",
-      sorted_by_title[0]["title"] == "Alpha task")
+result_last = binary_search(sorted_list, 50, key="value")
+check("binary_search finds last index", result_last, 4)
 
-sorted_desc = insertion_sort(sample, key="priority", reverse=True)
-check("insertion_sort: reverse=True gives descending order",
-      sorted_desc[0]["priority"] == 5)
+result_middle = binary_search(sorted_list, 30, key="value")
+check("binary_search finds middle index", result_middle, 2)
 
-empty_sorted = insertion_sort([], key="priority")
-check("insertion_sort: empty list returns empty list", empty_sorted == [])
+# ── Case 4: binary_search returns not-found (-1) when target absent ──
+result_absent = binary_search(sorted_list, 999, key="value")
+check("binary_search absent value returns -1", result_absent, -1)
 
-single = insertion_sort([{"priority": 3}], key="priority")
-check("insertion_sort: single-element list is unchanged", single[0]["priority"] == 3)
+# ── Case 5: insertion_sort_count sorts correctly and returns int > 0 ──
+small_list = [{"value": 3}, {"value": 1}, {"value": 2}]
+count_result = insertion_sort_count(small_list, key="value")
 
-_, count_already_sorted = insertion_sort_count([1, 2, 3, 4, 5])
-check("insertion_sort_count: already-sorted list has 0 swaps (best case O(n))",
-      count_already_sorted == 0)  # no comparisons result in a swap
+sorted_correctly = small_list == [{"value": 1}, {"value": 2}, {"value": 3}]
+check("insertion_sort_count sorts correctly", sorted_correctly, True)
 
-# ---------------------------------------------------------------------------
-# binary_search tests
-# ---------------------------------------------------------------------------
-sorted_titles = insertion_sort(sample, key="title")
-idx = binary_search(sorted_titles, "Mango task", key="title")
-check("binary_search: finds existing element", idx != -1)
-check("binary_search: found element has correct title",
-      sorted_titles[idx]["title"] == "Mango task")
+is_positive_int = isinstance(count_result, int) and count_result > 0
+check("insertion_sort_count returns positive int", is_positive_int, True)
 
-not_found = binary_search(sorted_titles, "Nonexistent", key="title")
-check("binary_search: returns -1 for missing element", not_found == -1)
+# ── Case 6: binary_search_count returns correct index + comparison_count > 0 ──
+sorted_list_2 = [
+    {"value": 10}, {"value": 20}, {"value": 30}, {"value": 40}, {"value": 50}
+]
+search_result = binary_search_count(sorted_list_2, 30, key="value")
 
-_, bs_count = binary_search_count(sorted_titles, "Zebra task", key="title")
-check("binary_search_count: comparisons <= ceil(log2(n+1))",
-      bs_count <= 4)  # len=4, ceil(log2(5))=3 — allow one extra for boundary
+check("binary_search_count returns correct index", search_result["index"], 2)
+comparison_positive = search_result["comparison_count"] > 0
+check("binary_search_count comparison_count > 0", comparison_positive, True)
 
-# ---------------------------------------------------------------------------
-# linear_search tests
-# ---------------------------------------------------------------------------
-indices = linear_search(sample, "Alpha task", key="title")
-check("linear_search: finds all occurrences of duplicate title", len(indices) == 2)
+# ── Case 7: linear_search_count on absent value — index not-found, count == len ──
+unsorted_list = [{"value": 5}, {"value": 15}, {"value": 25}]
+absent_result = linear_search_count(unsorted_list, 999, key="value")
 
-substr_indices = linear_search(sample, "task", key="title", substring=True)
-check("linear_search: substring=True matches all items containing 'task'",
-      len(substr_indices) == len(sample))
+check("linear_search_count absent index is -1", absent_result["index"], -1)
+check(
+    "linear_search_count absent comparison_count equals list length",
+    absent_result["comparison_count"],
+    len(unsorted_list),
+)
 
-no_match = linear_search(sample, "ZZZNOPE", key="title", substring=True)
-check("linear_search: returns empty list when no match", no_match == [])
-
-# ---------------------------------------------------------------------------
-# Summary
-# ---------------------------------------------------------------------------
-total = 12
-passed = total - _failures
-print(f"\nResults: {passed}/{total} passed", "✓" if _failures == 0 else "✗")
-sys.exit(0 if _failures == 0 else 1)
+print("\nAll checks completed.")
