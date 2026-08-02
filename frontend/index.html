@@ -15,6 +15,44 @@
 
   <main class="app-main">
 
+    <!-- Create user form -->
+    <section class="add-user-section" aria-labelledby="add-user-heading">
+      <h2 id="add-user-heading">Create a User</h2>
+      <form id="add-user-form" novalidate>
+        <div class="form-group">
+          <label for="user-name">Name</label>
+          <input type="text" id="user-name" name="name" placeholder="e.g. Priya Sharma" />
+        </div>
+
+        <div class="form-group">
+          <label for="user-email">Email</label>
+          <input type="email" id="user-email" name="email" placeholder="e.g. priya@blinkit.com" />
+        </div>
+
+        <button type="submit" class="create_btn">Create User</button>
+      </form>
+      <p class="hint">Created user's ID will appear here — use it as "Owner User ID" below.</p>
+      <p id="last-created-user-id" class="hint"></p>
+    </section>
+
+    <!-- Create project form -->
+    <section class="add-project-section" aria-labelledby="add-project-heading">
+      <h2 id="add-project-heading">Create a Project</h2>
+      <form id="add-project-form" novalidate>
+        <div class="form-group">
+          <label for="project-name">Project Name</label>
+          <input type="text" id="project-name" name="name" placeholder="e.g. Dark Store Ops" />
+        </div>
+
+        <div class="form-group">
+          <label for="project-owner-id">Owner User ID</label>
+          <input type="number" id="project-owner-id" name="owner_id" placeholder="e.g. 1" />
+        </div>
+
+        <button type="submit" class="create_btn">Create Project</button>
+      </form>
+    </section>
+
     <!-- Sticky add-task form -->
     <section class="add-task-section" aria-labelledby="add-task-heading">
       <h2 id="add-task-heading">Add a Task</h2>
@@ -40,8 +78,10 @@
         </div>
 
         <div class="form-group">
-          <label for="task-project-id">Project ID</label>
-          <input type="number" id="task-project-id" name="project_id" placeholder="e.g. 1" />
+          <label for="task-project-id">Project</label>
+          <select id="task-project-id" name="project_id">
+            <option value="">Select a project...</option>
+          </select>
         </div>
 
         <button type="submit">Add Task</button>

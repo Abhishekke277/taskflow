@@ -6,6 +6,16 @@ const priorityInput = document.getElementById("task-priority");
 const projectIdInput = document.getElementById("task-project-id");
 const titleError = document.getElementById("title-error");
 
+const addUserForm = document.getElementById("add-user-form");
+const userNameInput = document.getElementById("user-name");
+const userEmailInput = document.getElementById("user-email");
+const lastCreatedUserIdEl = document.getElementById("last-created-user-id");
+
+const addProjectForm = document.getElementById("add-project-form");
+const projectNameInput = document.getElementById("project-name");
+const projectOwnerIdInput = document.getElementById("project-owner-id");
+const taskProjectSelect = document.getElementById("task-project-id");
+
 let currentTasks = [];
 
 /**
@@ -13,7 +23,6 @@ let currentTasks = [];
  * No innerHTML with user-provided data — textContent only.
  */
 function renderTasks(tasks) {
-  // Clear existing content
   taskListContainer.textContent = "";
 
   if (tasks.length === 0) {
@@ -28,12 +37,11 @@ function renderTasks(tasks) {
     taskItem.className = "task-item";
     taskItem.dataset.taskId = task.id;
 
-    // ── Task info block ──
     const infoDiv = document.createElement("div");
     infoDiv.className = "task-info";
 
     const titleEl = document.createElement("h3");
-    titleEl.textContent = task.title; // safe: textContent, not innerHTML
+    titleEl.textContent = task.title;
 
     const metaEl = document.createElement("p");
     metaEl.className = "task-meta";
@@ -47,7 +55,6 @@ function renderTasks(tasks) {
     infoDiv.appendChild(titleEl);
     infoDiv.appendChild(metaEl);
 
-    // ── Actions block ──
     const actionsDiv = document.createElement("div");
     actionsDiv.className = "task-actions";
 
@@ -75,7 +82,6 @@ function renderTasks(tasks) {
  * the real backend list and updates once it arrives.
  */
 async function loadTasks() {
-  // Show cached data first so the page is never blank while loading
   currentTasks = loadTasksFromCache();
   renderTasks(currentTasks);
 
@@ -90,6 +96,101 @@ async function loadTasks() {
 }
 
 /**
+ * Fetches all projects and populates the dropdown in the task form.
+ */
+async function loadProjectsIntoDropdown() {
+  try {
+    const response = await fetch(`${API_BASE_URL}/projects/`);
+    if (!response.ok) throw new Error("Failed to fetch projects");
+    const projects = await response.json();
+
+    taskProjectSelect.textContent = "";
+    const placeholderOption = document.createElement("option");
+    placeholderOption.value = "";
+    placeholderOption.textContent = "Select a project...";
+    taskProjectSelect.appendChild(placeholderOption);
+
+    projects.forEach((project) => {
+      const option = document.createElement("option");
+      option.value = project.id;
+      option.textContent = `${project.name} (#${project.id})`;
+      taskProjectSelect.appendChild(option);
+    });
+  } catch (err) {
+    console.error("Could not load projects:", err);
+  }
+}
+
+/**
+ * Handles create-user form submission.
+ */
+addUserForm.addEventListener("submit", async (event) => {
+  event.preventDefault();
+
+  const name = userNameInput.value.trim();
+  const email = userEmailInput.value.trim();
+
+  if (!name || !email) {
+    alert("Please enter both a name and an email.");
+    return;
+  }
+
+  try {
+    const response = await fetch(`${API_BASE_URL}/users/`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name, email }),
+    });
+
+    if (!response.ok) {
+      const errorBody = await response.json().catch(() => ({}));
+      throw new Error(errorBody.detail ? JSON.stringify(errorBody.detail) : "Failed to create user");
+    }
+
+    const createdUser = await response.json();
+    lastCreatedUserIdEl.textContent = `Created user "${createdUser.name}" — ID: ${createdUser.id}`;
+    addUserForm.reset();
+  } catch (err) {
+    console.error("Failed to create user:", err);
+    alert("Failed to create user. Check the console for details — email might already be in use.");
+  }
+});
+
+/**
+ * Handles create-project form submission.
+ */
+addProjectForm.addEventListener("submit", async (event) => {
+  event.preventDefault();
+
+  const name = projectNameInput.value.trim();
+  const ownerId = parseInt(projectOwnerIdInput.value, 10);
+
+  if (!name || !ownerId) {
+    alert("Please enter both a project name and owner user ID.");
+    return;
+  }
+
+  try {
+    const response = await fetch(`${API_BASE_URL}/projects/`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name, owner_id: ownerId }),
+    });
+
+    if (!response.ok) {
+      const errorBody = await response.json().catch(() => ({}));
+      throw new Error(errorBody.detail ? JSON.stringify(errorBody.detail) : "Failed to create project");
+    }
+
+    addProjectForm.reset();
+    await loadProjectsIntoDropdown();
+  } catch (err) {
+    console.error("Failed to create project:", err);
+    alert("Failed to create project. Check the console for details.");
+  }
+});
+
+/**
  * Handles add-task form submission.
  */
 addTaskForm.addEventListener("submit", async (event) => {
@@ -97,7 +198,6 @@ addTaskForm.addEventListener("submit", async (event) => {
 
   const title = titleInput.value.trim();
 
-  // Client-side validation: empty title after trimming
   if (!title) {
     titleError.textContent = "Title cannot be empty.";
     return;
@@ -106,7 +206,7 @@ addTaskForm.addEventListener("submit", async (event) => {
 
   const projectId = parseInt(projectIdInput.value, 10);
   if (!projectId) {
-    alert("Please enter a valid project ID.");
+    alert("Please select a project.");
     return;
   }
 
@@ -144,7 +244,7 @@ titleInput.addEventListener("input", () => {
  */
 async function handleEditTask(task) {
   const newTitle = prompt("Edit task title:", task.title);
-  if (newTitle === null) return; // cancelled
+  if (newTitle === null) return;
 
   const trimmedTitle = newTitle.trim();
   if (!trimmedTitle) {
@@ -183,3 +283,4 @@ async function handleDeleteTask(taskId) {
 
 // Initial load on page open
 loadTasks();
+loadProjectsIntoDropdown();
