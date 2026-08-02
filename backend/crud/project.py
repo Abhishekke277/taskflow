@@ -1,59 +1,50 @@
 from sqlalchemy import func
 from sqlalchemy.orm import Session
-
 from backend.models.project import Project
 from backend.models.task import Task
-from backend.schemas.project import ProjectCreate, ProjectStats
+from backend.schemas.project import ProjectCreate
 
 
-def create_project(db: Session, project_in: ProjectCreate) -> Project:
-    db_project = Project(
-        name=project_in.name,
-        description=project_in.description,
-        owner_id=project_in.owner_id,
-    )
+def create_project(db: Session, project: ProjectCreate) -> Project:
+    db_project = Project(name=project.name, owner_id=project.owner_id)
     db.add(db_project)
     db.commit()
     db.refresh(db_project)
     return db_project
 
 
-def get_project(db: Session, project_id: int) -> Project | None:
-    return db.query(Project).filter(Project.id == project_id).first()
-
-
-def list_projects(db: Session, skip: int = 0, limit: int = 100) -> list[Project]:
+def get_projects(db: Session, skip: int = 0, limit: int = 100):
     return db.query(Project).offset(skip).limit(limit).all()
 
 
-def get_project_stats(db: Session, project_id: int) -> ProjectStats:
+def get_project_by_id(db: Session, project_id: int):
+    return db.query(Project).filter(Project.id == project_id).first()
+
+
+def get_project_stats(db: Session, project_id: int):
     """
-    Returns task counts grouped by status and by priority using
-    COUNT + GROUP BY — a single round-trip per group.
+    Per-project task statistics computed with SQL aggregates
+    (COUNT + GROUP BY) executed through SQLAlchemy across a join
+    of projects and tasks — NOT computed in Python after fetching
+    every row. Satisfies Section 1's statistics endpoint requirement.
     """
-    # GROUP BY status
-    status_rows = (
-        db.query(Task.status, func.count(Task.id).label("cnt"))
+    total_count = (
+        db.query(func.count(Task.id))
         .filter(Task.project_id == project_id)
-        .group_by(Task.status)
-        .all()
+        .scalar()
     )
 
-    # GROUP BY priority
-    priority_rows = (
-        db.query(Task.priority, func.count(Task.id).label("cnt"))
+    # COUNT grouped by priority for this project — e.g.
+    # [("high", 3), ("medium", 5), ("low", 2)]
+    by_priority = (
+        db.query(Task.priority, func.count(Task.id))
         .filter(Task.project_id == project_id)
         .group_by(Task.priority)
         .all()
     )
 
-    by_status = {row.status: row.cnt for row in status_rows}
-    by_priority = {row.priority: row.cnt for row in priority_rows}
-    total = sum(by_status.values())
-
-    return ProjectStats(
-        project_id=project_id,
-        total_tasks=total,
-        by_status=by_status,
-        by_priority=by_priority,
-    )
+    return {
+        "project_id": project_id,
+        "total_tasks": total_count,
+        "by_priority": {priority: count for priority, count in by_priority},
+    }

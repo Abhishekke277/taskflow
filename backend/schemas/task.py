@@ -1,55 +1,48 @@
-from pydantic import BaseModel, Field, field_validator
-from datetime import datetime
 from typing import Optional
-import re
+from pydantic import BaseModel, Field, field_validator
 
 
 class TaskCreate(BaseModel):
-    title: str = Field(..., min_length=1, max_length=300)
-    description: Optional[str] = None
-    # Field constraint: priority must be 1–5
-    priority: int = Field(default=3, ge=1, le=5)
-    due_date: Optional[str] = None  # ISO-8601 YYYY-MM-DD text column
-    status: str = Field(default="todo")
+    title: str
+    # Field constraint: priority must be exactly one of these three values
+    priority: str = Field(default="medium", pattern="^(low|medium|high)$")
+    due_date: Optional[str] = None
     project_id: int
 
-    # Custom validator: ensure due_date matches YYYY-MM-DD if provided
-    @field_validator("due_date")
+    # Custom validator: rejects a blank/whitespace-only title
+    @field_validator("title")
     @classmethod
-    def validate_due_date(cls, v: Optional[str]) -> Optional[str]:
-        if v is None:
-            return v
-        if not re.fullmatch(r"\d{4}-\d{2}-\d{2}", v):
-            raise ValueError("due_date must be in YYYY-MM-DD format")
-        return v
+    def title_must_not_be_blank(cls, value: str) -> str:
+        stripped = value.strip()
+        if not stripped:
+            raise ValueError("title cannot be blank")
+        return stripped
 
 
 class TaskUpdate(BaseModel):
-    title: Optional[str] = Field(default=None, min_length=1, max_length=300)
-    description: Optional[str] = None
-    priority: Optional[int] = Field(default=None, ge=1, le=5)
+    # All fields optional here, since a PATCH/PUT may update
+    # only some fields at a time
+    title: Optional[str] = None
+    priority: Optional[str] = Field(default=None, pattern="^(low|medium|high)$")
     due_date: Optional[str] = None
-    status: Optional[str] = None
 
-    @field_validator("due_date")
+    @field_validator("title")
     @classmethod
-    def validate_due_date(cls, v: Optional[str]) -> Optional[str]:
-        if v is None:
-            return v
-        if not re.fullmatch(r"\d{4}-\d{2}-\d{2}", v):
-            raise ValueError("due_date must be in YYYY-MM-DD format")
-        return v
+    def title_must_not_be_blank(cls, value: Optional[str]) -> Optional[str]:
+        if value is None:
+            return value
+        stripped = value.strip()
+        if not stripped:
+            raise ValueError("title cannot be blank")
+        return stripped
 
 
 class TaskResponse(BaseModel):
     id: int
     title: str
-    description: Optional[str]
-    priority: int
-    due_date: Optional[str]
-    status: str
+    priority: str
+    due_date: Optional[str] = None
     project_id: int
-    created_at: datetime
-    updated_at: datetime
 
-    model_config = {"from_attributes": True}
+    class Config:
+        from_attributes = True

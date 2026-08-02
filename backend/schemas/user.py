@@ -1,5 +1,4 @@
 from pydantic import BaseModel, EmailStr
-from datetime import datetime
 
 
 class UserCreate(BaseModel):
@@ -10,7 +9,9 @@ class UserCreate(BaseModel):
 class UserResponse(BaseModel):
     id: int
     name: str
-    email: str
-    created_at: datetime
+    email: EmailStr
 
-    model_config = {"from_attributes": True}
+    class Config:
+        # Allows Pydantic to read data directly from SQLAlchemy
+        # model instances (ORM objects), not just dicts
+        from_attributes = True

@@ -1,48 +1,49 @@
 from sqlalchemy.orm import Session
-
 from backend.models.task import Task
 from backend.schemas.task import TaskCreate, TaskUpdate
 
 
-def create_task(db: Session, task_in: TaskCreate) -> Task:
-    db_task = Task(**task_in.model_dump())
+def create_task(db: Session, task: TaskCreate) -> Task:
+    db_task = Task(
+        title=task.title,
+        priority=task.priority,
+        due_date=task.due_date,
+        project_id=task.project_id,
+    )
     db.add(db_task)
     db.commit()
     db.refresh(db_task)
     return db_task
 
 
-def get_task(db: Session, task_id: int) -> Task | None:
+def get_tasks(db: Session, skip: int = 0, limit: int = 100):
+    return db.query(Task).offset(skip).limit(limit).all()
+
+
+def get_task_by_id(db: Session, task_id: int):
     return db.query(Task).filter(Task.id == task_id).first()
 
 
-def list_tasks(
-    db: Session,
-    project_id: int | None = None,
-    skip: int = 0,
-    limit: int = 100,
-) -> list[Task]:
-    q = db.query(Task)
-    if project_id is not None:
-        q = q.filter(Task.project_id == project_id)
-    return q.offset(skip).limit(limit).all()
-
-
-def update_task(db: Session, task_id: int, task_in: TaskUpdate) -> Task | None:
-    db_task = get_task(db, task_id)
-    if not db_task:
+def update_task(db: Session, task_id: int, task_update: TaskUpdate):
+    db_task = get_task_by_id(db, task_id)
+    if db_task is None:
         return None
-    for field, value in task_in.model_dump(exclude_unset=True).items():
+
+    # Only update fields the client actually sent (exclude_unset=True
+    # skips fields left as None/default in the request body)
+    update_data = task_update.model_dump(exclude_unset=True)
+    for field, value in update_data.items():
         setattr(db_task, field, value)
+
     db.commit()
     db.refresh(db_task)
     return db_task
 
 
-def delete_task(db: Session, task_id: int) -> bool:
-    db_task = get_task(db, task_id)
-    if not db_task:
-        return False
+def delete_task(db: Session, task_id: int):
+    db_task = get_task_by_id(db, task_id)
+    if db_task is None:
+        return None
     db.delete(db_task)
     db.commit()
-    return True
+    return db_task

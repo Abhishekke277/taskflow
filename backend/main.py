@@ -1,13 +1,15 @@
 from fastapi import FastAPI
 from backend.database import Base, engine
 from backend import models  # noqa: F401 — ensures all models are registered
+from backend.routers import users, projects, tasks
 
-# Creates all tables (users, projects, tasks) in the connected database
-# if they don't already exist. Safe to run every startup — it won't
-# drop or duplicate existing tables.
 Base.metadata.create_all(bind=engine)
 
 app = FastAPI(title="TaskFlow API")
+
+app.include_router(users.router)
+app.include_router(projects.router)
+app.include_router(tasks.router)
 
 
 @app.get("/")
