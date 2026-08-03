@@ -1,46 +1,27 @@
-"""
-Prompt builder for the AI quick-add feature.
-
-Uses a system + user role structure:
-  - system role: locks the model to JSON-only output and defines the schema,
-                 preventing free-text hallucination.
-  - user role:   passes the raw natural-language task description.
-"""
-
-
-SYSTEM_PROMPT = """\
-You are a task-parsing assistant. When given a plain-English task description, \
-extract structured fields and return ONLY a JSON object with no extra text.
-
-The JSON must follow this exact schema:
-{
-  "title":       "<string, required — concise task title>",
-  "description": "<string or null>",
-  "priority":    <integer 1–5, default 3 — 1=low, 5=critical>,
-  "due_date":    "<YYYY-MM-DD string or null>",
-  "status":      "<one of: todo | in_progress | done, default todo>"
-}
-
-Rules:
-- Output valid JSON only. No markdown, no prose.
-- Infer priority from urgency keywords: "critical"/"urgent" → 5, "asap" → 4, \
-  "low priority"/"whenever" → 1–2, otherwise 3.
-- If no due date is mentioned, set due_date to null.
-- Keep title short (≤ 80 chars); move detail to description.
-"""
-
-
-def build_messages(user_text: str) -> list[dict]:
+def build_quick_add_prompt(description: str) -> dict:
     """
-    Return the messages list expected by the OpenAI Chat Completions API.
-
-    Args:
-        user_text: Raw natural-language string from the client.
-
-    Returns:
-        [{"role": "system", ...}, {"role": "user", ...}]
+    Constructs the "prompt" using the standard role-based structure
+    for LLM messaging — a system-role instruction describing the
+    parsing behavior, and a user-role message carrying the free-text
+    description. Used even though the mock parser answers it, so the
+    code is structured identically whether a mock or a real model
+    handles the request.
     """
-    return [
-        {"role": "system", "content": SYSTEM_PROMPT},
-        {"role": "user", "content": user_text.strip()},
-    ]
+    system_message = (
+        "You are a task-parsing assistant. Given a free-text task "
+        "description, extract three fields: "
+        "1) title — the task description with any priority or "
+        "date-related keywords removed, trimmed of whitespace; "
+        "2) priority — exactly one of 'low', 'medium', or 'high', "
+        "based on urgency keywords in the text; "
+        "3) due_date_hint — a date phrase found in the text (e.g. "
+        "'tomorrow', 'next friday'), or null if none is present. "
+        "Respond with these three fields only."
+    )
+
+    user_message = description
+
+    return {
+        "system": system_message,
+        "user": user_message,
+    }
