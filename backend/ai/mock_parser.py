@@ -1,90 +1,96 @@
-"""
-Deterministic rule-based parser — the default parser when USE_REAL_LLM=false.
-
-No API key required. Parses a natural-language string using simple keyword
-rules and regex to produce the same field set that the LLM would return.
-This is required (not optional) as the fallback path.
-"""
-
-import re
-from typing import Optional
-
-
-# Priority keyword maps (checked in order; first match wins)
-_PRIORITY_RULES: list[tuple[list[str], int]] = [
-    (["critical", "urgent", "emergency", "immediately"], 5),
-    (["asap", "high priority", "important"], 4),
-    (["low priority", "whenever", "no rush", "sometime"], 2),
-    (["very low", "lowest"], 1),
-]
-
-# Regex to find an ISO date anywhere in the string
-_DATE_RE = re.compile(r"\b(\d{4}-\d{2}-\d{2})\b")
-
-# Relative date hints
-_REL_DATE_RE = re.compile(
-    r"\b(today|tomorrow|next week|next month)\b", re.IGNORECASE
-)
-
-
-def _infer_priority(text: str) -> int:
-    lower = text.lower()
-    for keywords, priority in _PRIORITY_RULES:
-        if any(kw in lower for kw in keywords):
-            return priority
-    return 3  # default
-
-
-def _infer_due_date(text: str) -> Optional[str]:
-    # Prefer explicit ISO date
-    match = _DATE_RE.search(text)
-    if match:
-        return match.group(1)
-
-    # Relative hints → return the keyword as a placeholder note in description
-    # (real date math is out of scope for the mock parser)
-    return None
-
-
-def _infer_status(text: str) -> str:
-    lower = text.lower()
-    if any(kw in lower for kw in ["in progress", "working on", "started", "ongoing"]):
-        return "in_progress"
-    if any(kw in lower for kw in ["done", "finished", "completed", "complete"]):
-        return "done"
-    return "todo"
-
-
-def _extract_title(text: str) -> str:
+def parse_task_description(description: str) -> dict:
     """
-    Use the first sentence (up to the first '.', '!', '?', or 80 chars)
-    as the title.
+    Deterministic, rule-based mock parser. Simulates what an LLM
+    response would contain, given a free-text task description.
+    Runs with zero network calls and zero API keys.
+
+    Returns a dict with: title, priority, due_date_hint
     """
-    first = re.split(r"[.!?]", text.strip())[0].strip()
-    return first[:80] if first else text[:80]
+    original_description = description
+    lowered = description.lower()
 
+    # ── Step b: Priority ──
+    # Group (i) keywords — checked first, "high" wins if present
+    high_keywords = ["urgent", "asap"]
+    # Group (ii) keywords — checked second
+    low_keywords = ["whenever", "low priority"]
 
-def _extract_description(text: str, title: str) -> Optional[str]:
-    """Return the remainder of the text after the title sentence, or None."""
-    remainder = text.strip()[len(title):].lstrip(".!? ").strip()
-    return remainder if remainder else None
+    matched_high = [kw for kw in high_keywords if kw in lowered]
+    matched_low = [kw for kw in low_keywords if kw in lowered]
 
+    if matched_high:
+        priority = "high"
+    elif matched_low:
+        priority = "low"
+    else:
+        priority = "medium"
 
-def parse(text: str) -> dict:
-    """
-    Parse *text* and return a dict matching QuickAddResponse fields
-    (excluding project_id and parser_used, which the caller adds).
-    """
-    title = _extract_title(text)
-    description = _extract_description(text, title)
-    priority = _infer_priority(text)
-    due_date = _infer_due_date(text)
-    status = _infer_status(text)
+    # ── Step c: Due-date hint ──
+    # Checked in this exact order: today, tomorrow, next week,
+    # then "next <weekday>" (Mon-Sun), then bare weekday (Mon-Sun)
+    due_date_hint = None
+    matched_date_phrase = None
+
+    simple_date_keywords = ["today", "tomorrow", "next week"]
+    for keyword in simple_date_keywords:
+        if keyword in lowered:
+            due_date_hint = keyword
+            matched_date_phrase = keyword
+            break
+
+    if due_date_hint is None:
+        next_weekday_phrases = [
+            "next monday", "next tuesday", "next wednesday", "next thursday",
+            "next friday", "next saturday", "next sunday",
+        ]
+        for phrase in next_weekday_phrases:
+            if phrase in lowered:
+                due_date_hint = phrase
+                matched_date_phrase = phrase
+                break
+
+    if due_date_hint is None:
+        bare_weekdays = [
+            "monday", "tuesday", "wednesday", "thursday",
+            "friday", "saturday", "sunday",
+        ]
+        for day in bare_weekdays:
+            if day in lowered:
+                due_date_hint = day
+                matched_date_phrase = day
+                break
+
+    # ── Step d: Title ──
+    # Remove every occurrence of every group (i)/(ii) keyword found,
+    # plus every occurrence of the matched date phrase (if any),
+    # from the ORIGINAL-cased description. Case-insensitive removal.
+    title = original_description
+
+    all_priority_keywords_found = matched_high + matched_low
+    for keyword in all_priority_keywords_found:
+        title = _remove_case_insensitive(title, keyword)
+
+    if matched_date_phrase:
+        title = _remove_case_insensitive(title, matched_date_phrase)
+
+    title = title.strip()
+
+    if not title:
+        title = "Untitled task"
 
     return {
         "title": title,
-        "description": description,
         "priority": priority,
-        "due_date": due_date,
-        "status": status,
+        "due_date_hint": due_date_hint,
     }
+
+
+def _remove_case_insensitive(text: str, phrase: str) -> str:
+    """
+    Removes every occurrence of `phrase` from `text`, matching
+    case-insensitively but preserving the original casing of
+    the surrounding text that isn't removed.
+    """
+    import re
+    pattern = re.compile(re.escape(phrase), re.IGNORECASE)
+    return pattern.sub("", text)
