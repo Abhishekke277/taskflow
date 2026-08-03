@@ -1,50 +1,74 @@
 """
 Real-LLM parser — only active when USE_REAL_LLM=true in config.
 
-Calls the OpenAI Chat Completions API using the prompt built by prompt.py.
-Falls back to mock_parser if the API call fails or returns malformed JSON.
+Calls GROQ (xAI) via the OpenAI-compatible SDK, using the prompt
+built by prompt.py. Falls back to the mock parser if the API call
+fails, times out, or returns malformed/invalid JSON.
 """
 
 import json
 import logging
-from typing import Optional
 
-from backend.config import OPENAI_API_KEY, OPENAI_MODEL
-from backend.ai.prompt import build_messages
-from backend.ai import mock_parser
+from backend.config import GROQ_API_KEY
+from backend.ai.prompt import build_quick_add_prompt
+from backend.ai.mock_parser import parse_task_description
 
 logger = logging.getLogger(__name__)
 
 
-def parse(text: str) -> dict:
+def parse_with_real_llm(description: str) -> dict:
     """
-    Send *text* to the configured LLM and return parsed task fields.
-    Falls back to mock_parser.parse() on any error.
+    Sends `description` to GROQ and returns parsed task fields:
+    title, priority ('low'/'medium'/'high'), due_date_hint.
+    Falls back to the deterministic mock parser on any error.
     """
     try:
-        # Lazy import so the project doesn't require openai when USE_REAL_LLM=false
-        import openai  # type: ignore
+        # Lazy import so the project doesn't require `openai` installed
+        # when USE_REAL_LLM=false
+        from openai import OpenAI
 
-        client = openai.OpenAI(api_key=OPENAI_API_KEY)
-        response = client.chat.completions.create(
-            model=OPENAI_MODEL,
-            messages=build_messages(text),
-            temperature=0,
-            max_tokens=256,
+        prompt = build_quick_add_prompt(description)
+
+        json_instruction = (
+            prompt["system"] +
+            " Respond ONLY with a valid JSON object with exactly these "
+            "three keys: title (string), priority (one of 'low', "
+            "'medium', 'high'), due_date_hint (string or null). "
+            "No other text, no markdown formatting."
         )
 
-        raw = response.choices[0].message.content or ""
-        parsed = json.loads(raw)
+        client = OpenAI(api_key=GROQ_API_KEY, base_url="https://api.groq.com/openai/v1")
 
-        # Validate required field
-        if "title" not in parsed:
-            raise ValueError("LLM response missing 'title' field")
+        response = client.chat.completions.create(
+            model="llama-3.3-70b-versatile",
+            messages=[
+                {"role": "system", "content": json_instruction},
+                {"role": "user", "content": prompt["user"]},
+            ],
+            temperature=0,
+            max_tokens=200,
+        )
 
-        # Clamp priority to 1–5
-        parsed["priority"] = max(1, min(5, int(parsed.get("priority", 3))))
+        raw_text = (response.choices[0].message.content or "").strip()
+
+        # Strip markdown code fences if the model added them anyway
+        if raw_text.startswith("```"):
+            raw_text = raw_text.strip("`")
+            if raw_text.startswith("json"):
+                raw_text = raw_text[4:]
+            raw_text = raw_text.strip()
+
+        parsed = json.loads(raw_text)
+
+        required_keys = {"title", "priority", "due_date_hint"}
+        if not required_keys.issubset(parsed.keys()):
+            raise ValueError("LLM response missing required keys")
+
+        if parsed["priority"] not in ("low", "medium", "high"):
+            raise ValueError("LLM returned invalid priority value")
 
         return parsed
 
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         logger.warning("LLM parsing failed (%s); falling back to mock parser.", exc)
-        return mock_parser.parse(text)
+        return parse_task_description(description)
