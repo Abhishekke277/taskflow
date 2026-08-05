@@ -14,7 +14,7 @@ An internal task-and-project management platform built for Blinkit's dark-store 
 ```bash
    python -m venv venv
    # Windows:
-   venv\Scripts\Activate.ps1
+   venv\Scripts\activate
    # macOS/Linux:
    source venv/bin/activate
 ```
@@ -73,98 +73,111 @@ Base URL: `http://127.0.0.1:8000`
 
 **List users** — `GET /users/`
 ```json
-// Response (200)
-[{ "id": 1, "name": "Priya Sharma", "email": "priya@blinkit.com" }]
+// Response (200) — list
+[
+  { "id": 17, "name": "riya jatav", "email": "riya@gmail.com" },
+  { "id": 18, "name": "Ankush kewat", "email": "Ankush@gmail.com" },
+  { "id": 19, "name": "Priya Sharma", "email": "priya@blinkit.com" }
+]
 ```
-
 ### Projects
-
-**Create project** — `POST /projects/`
 ```json
-// Request
-{ "name": "Dark Store Ops", "owner_id": 1 }
+// Create — POST /projects/
+{ "name": "Dark Store Ops", "owner_id": 19 }
 // Response (201)
-{ "id": 1, "name": "Dark Store Ops", "owner_id": 1 }
+{ "id": 13, "name": "Dark Store Ops", "owner_id": 19 }
 ```
 
-**List projects** — `GET /projects/`
+// List — GET /projects/
+```json
+[
+  { "id": 11, "name": "odd even", "owner_id": 17 },
+  { "id": 12, "name": "Ai Chatbout", "owner_id": 18 },
+  { "id": 13, "name": "Dark Store Ops", "owner_id": 19 }
+]
+```
+```json
+// Get by ID — GET /projects/13
+// Response (200)
+{ "id": 13, "name": "Dark Store Ops", "owner_id": 19 }
+```
+
+// Statistics — GET /projects/13/stats
 ```json
 // Response (200)
-[{ "id": 1, "name": "Dark Store Ops", "owner_id": 1 }]
-```
+{ "project_id": 13, "total_tasks": 0, "by_priority": {} }
 
-**Get project by id** — `GET /projects/{id}`
-```json
-// Response (200)
-{ "id": 1, "name": "Dark Store Ops", "owner_id": 1 }
-// 404 if not found: { "detail": "Project not found" }
+(Example above shows a freshly created project with no tasks yet. Once tasks are added, by_priority reflects the real distribution, e.g. {"high": 2, "medium": 1}.)
 ```
-
-**Project statistics** — `GET /projects/{id}/stats`
-```json
-// Response (200)
-{ "project_id": 1, "total_tasks": 3, "by_priority": { "high": 1, "medium": 2 } }
-```
-
 ### Tasks
 
 **Create task** — `POST /tasks/`
 ```json
 // Request
-{ "title": "Restock shelves", "priority": "high", "due_date": "tomorrow", "project_id": 1 }
+{ "title": "Restock shelves", "priority": "high", "due_date": "tomorrow", "project_id": 13 }
 // Response (201)
-{ "id": 1, "title": "Restock shelves", "priority": "high", "due_date": "tomorrow", "project_id": 1 }
+{ "id": 23, "title": "Restock shelves", "priority": "high", "due_date": "tomorrow", "project_id": 13 }
 ```
 
 **List tasks** — `GET /tasks/`
 ```json
 // Response (200)
-[{ "id": 1, "title": "Restock shelves", "priority": "high", "due_date": "tomorrow", "project_id": 1 }]
+[
+  { "id": 22, "title": "Create AI bout", "priority": "medium", "due_date": "6", "project_id": 12 },
+  { "id": 23, "title": "Restock shelves", "priority": "high", "due_date": "tomorrow", "project_id": 13 }
+]
 ```
 
 **Get task by id** — `GET /tasks/{id}`
 ```json
 // Response (200)
-{ "id": 1, "title": "Restock shelves", "priority": "high", "due_date": "tomorrow", "project_id": 1 }
+{ "id": 23, "title": "Restock shelves", "priority": "high", "due_date": "tomorrow", "project_id": 13 }
 // 404 if not found: { "detail": "Task not found" }
 ```
 
 **Update task** — `PUT /tasks/{id}`
 ```json
-// Request
+// Update — PUT /tasks/23
 { "title": "Restock shelves urgently" }
 // Response (200)
-{ "id": 1, "title": "Restock shelves urgently", "priority": "high", "due_date": "tomorrow", "project_id": 1 }
+{ "id": 23, "title": "Restock shelves urgently", "priority": "high", "due_date": "tomorrow", "project_id": 13 }
 ```
 
 **Delete task** — `DELETE /tasks/{id}`
 ```json
+// Delete — DELETE /tasks/23
 // Response (200)
-{ "message": "Task deleted", "id": 1 }
+{ "message": "Task deleted", "id": 23 }
+("run this after complete search section not before.")
 ```
 
-**Sorted list (Section 2)** — `GET /tasks?sort=priority` (or `sort=due_date`)
+**Sorted list (Section 2)** — `GET /tasks?sort=priority` 
 ```json
-// Response (200) — sorted using our own insertion_sort, not built-in sort or ORDER BY
+// Sorted list — GET /tasks?sort=priority
+// Response (200) — sorted via our own insertion_sort, not built-in sort or ORDER BY
 [
-  { "id": 3, "title": "Low priority task", "priority": "low", "due_date": null, "project_id": 1 },
-  { "id": 1, "title": "Restock shelves", "priority": "high", "due_date": "tomorrow", "project_id": 1 }
+  { "id": 21, "title": "start bussiness", "priority": "low", "due_date": ".5 day", "project_id": 11 },
+  { "id": 15, "title": "solve two problems", "priority": "medium", "due_date": "1 days", "project_id": 8 },
+  { "id": 22, "title": "Create AI bout", "priority": "medium", "due_date": "6", "project_id": 12 },
+  { "id": 7, "title": "Calculator", "priority": "high", "due_date": "1 days", "project_id": 5 },
+  { "id": 20, "title": "kanban bourd", "priority": "high", "due_date": "2 days", "project_id": 4 }
 ]
 ```
 
-**Search (Section 2)** — `GET /tasks/search?title=Restock shelves&algo=binary` (or `algo=linear`)
+**Search (Section 2)** — `GET /tasks/search?title=Restock shelves urgently&algo=binary` (or `algo=linear`)
 ```json
+// Search — GET /tasks/search?title=Restock shelves urgently&algo=binary
 // Response (200)
-{ "id": 1, "title": "Restock shelves", "priority": "high", "due_date": "tomorrow", "project_id": 1 }
+{ "id": 23, "title": "Restock shelves urgently", "priority": "high", "due_date": "tomorrow", "project_id": 13 }
 // 404 if no exact match: { "detail": "No task found with that exact title" }
 ```
 
 **AI Quick-Add (Section 3)** — `POST /tasks/quick-add`
 ```json
-// Request
-{ "description": "This is urgent, mark it ASAP please", "project_id": 1 }
+// AI Quick-Add (Section 3) — POST /tasks/quick-add
+{ "description": "This is urgent, mark it ASAP please", "project_id": 13 }
 // Response (201)
-{ "id": 8, "title": "This is , mark it  please", "priority": "high", "due_date": null, "project_id": 1 }
+{ "id": 24, "title": "This is , mark it  please", "priority": "high", "due_date": null, "project_id": 13 }
 // 422 if project_id doesn't exist or body is malformed
 ```
 
