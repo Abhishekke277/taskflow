@@ -1,103 +1,375 @@
-const taskListContainer = document.getElementById("task-list-container");
+// ── Theme toggle ──
+const themeToggleBtn = document.getElementById("theme-toggle-btn");
+let isLightMode = localStorage.getItem("taskflow_theme") === "light";
+
+if (isLightMode) {
+  document.documentElement.setAttribute("data-theme", "light");
+  themeToggleBtn.textContent = "🌙 Dark";
+}
+
+themeToggleBtn.addEventListener("click", () => {
+  isLightMode = !isLightMode;
+  if (isLightMode) {
+    document.documentElement.setAttribute("data-theme", "light");
+    localStorage.setItem("taskflow_theme", "light");
+    themeToggleBtn.textContent = "🌙 Dark";
+  } else {
+    document.documentElement.removeAttribute("data-theme");
+    localStorage.setItem("taskflow_theme", "dark");
+    themeToggleBtn.textContent = "☀ Light";
+  }
+});
+
+// ── Element references ──
+const setupToggleBtn = document.getElementById("setup-toggle-btn");
+const setupPanel = document.getElementById("setup-panel");
+
+const quickAddToggle = document.getElementById("quick-add-toggle");
 const addTaskForm = document.getElementById("add-task-form");
 const titleInput = document.getElementById("task-title");
 const dueDateInput = document.getElementById("task-due-date");
 const priorityInput = document.getElementById("task-priority");
 const projectIdInput = document.getElementById("task-project-id");
-const titleError = document.getElementById("title-error");
+const taskFormMsg = document.getElementById("task-form-msg");
 
 const addUserForm = document.getElementById("add-user-form");
 const userNameInput = document.getElementById("user-name");
 const userEmailInput = document.getElementById("user-email");
-const lastCreatedUserIdEl = document.getElementById("last-created-user-id");
+const userFormMsg = document.getElementById("user-form-msg");
 
 const addProjectForm = document.getElementById("add-project-form");
 const projectNameInput = document.getElementById("project-name");
 const projectOwnerIdInput = document.getElementById("project-owner-id");
+const projectFormMsg = document.getElementById("project-form-msg");
 const taskProjectSelect = document.getElementById("task-project-id");
 
+const searchInput = document.getElementById("search-input");
+const searchBtn = document.getElementById("search-btn");
+const clearSearchBtn = document.getElementById("clear-search-btn");
+const searchResultMsg = document.getElementById("search-result-msg");
+const algoButtons = document.querySelectorAll(".algo-btn");
+const sortButtons = document.querySelectorAll(".sort-btn");
+
+const flatListEl = document.getElementById("sorted-list-section");
+const flatListBody = document.getElementById("sorted-list-body");
+const boardEl = document.getElementById("priority-board");
+
+const laneBodies = {
+  high: document.getElementById("lane-high"),
+  medium: document.getElementById("lane-medium"),
+  low: document.getElementById("lane-low"),
+};
+const laneCounts = {
+  high: document.getElementById("count-high"),
+  medium: document.getElementById("count-medium"),
+  low: document.getElementById("count-low"),
+};
+
 let currentTasks = [];
+let activeAlgo = "binary";
 
-/**
- * Renders the task list into the DOM using createElement/appendChild.
- * No innerHTML with user-provided data — textContent only.
- */
-function renderTasks(tasks) {
-  taskListContainer.textContent = "";
+// Two independent states matching requested behavior:
+// viewMode: "list" (default) or "lanes" (when "priority" is clicked)
+// sortBy:   "none" (default) or "due_date" (when "due date" is clicked)
+let viewMode = "list";
+let sortBy = "none";
+let searchedTask = null; // Single task search isolate variable
 
-  if (tasks.length === 0) {
+// ── Collapsible setup panel ──
+setupToggleBtn.addEventListener("click", () => {
+  const isExpanded = setupToggleBtn.getAttribute("aria-expanded") === "true";
+  setupToggleBtn.setAttribute("aria-expanded", String(!isExpanded));
+  setupPanel.hidden = isExpanded;
+});
+
+// ── Quick-add toggle ──
+quickAddToggle.addEventListener("click", () => {
+  const isHidden = addTaskForm.hidden;
+  addTaskForm.hidden = !isHidden;
+  quickAddToggle.textContent = isHidden ? "− Cancel" : "+ New Task";
+  if (isHidden) titleInput.focus();
+});
+
+// ── Build a flat-list card (Image 1 style — shows priority badge) ──
+function buildListCard(task) {
+  const card = document.createElement("div");
+  card.className = "flat-task-card";
+  card.dataset.taskId = task.id;
+
+  const info = document.createElement("div");
+  info.className = "flat-task-info";
+
+  const titleEl = document.createElement("div");
+  titleEl.className = "flat-task-title";
+  titleEl.textContent = task.title;
+
+  const meta = document.createElement("div");
+  meta.className = "flat-task-meta";
+
+  const projSpan = document.createElement("span");
+  projSpan.textContent = `Project #${task.project_id || 0}`;
+
+  const dueSpan = document.createElement("span");
+  dueSpan.textContent = `· Due: ${task.due_date || "—"}`;
+
+  const badge = document.createElement("span");
+  badge.className = `priority-badge ${task.priority || "low"}`;
+  badge.textContent = task.priority || "low";
+
+  meta.appendChild(projSpan);
+  meta.appendChild(dueSpan);
+  meta.appendChild(badge);
+
+  info.appendChild(titleEl);
+  info.appendChild(meta);
+
+  const actions = document.createElement("div");
+  actions.className = "flat-task-actions";
+
+  const editBtn = document.createElement("button");
+  editBtn.textContent = "Edit";
+  editBtn.className = "flat-edit-btn";
+  editBtn.addEventListener("click", () => handleEditTask(task));
+
+  const deleteBtn = document.createElement("button");
+  deleteBtn.textContent = "Delete";
+  deleteBtn.className = "flat-delete-btn";
+  deleteBtn.addEventListener("click", () => handleDeleteTask(task.id));
+
+  actions.appendChild(editBtn);
+  actions.appendChild(deleteBtn);
+
+  card.appendChild(info);
+  card.appendChild(actions);
+
+  return card;
+}
+
+// ── Build a lane card (Image 2 style — no priority badge, column shows it) ──
+function buildLaneCard(task) {
+  const card = document.createElement("div");
+  card.className = "task-card";
+  card.dataset.taskId = task.id;
+
+  const top = document.createElement("div");
+  top.className = "task-card-top";
+
+  const titleEl = document.createElement("span");
+  titleEl.className = "task-title";
+  titleEl.textContent = task.title;
+
+  const idEl = document.createElement("span");
+  idEl.className = "task-id";
+  idEl.textContent = `#${String(task.id).padStart(3, "0")}`;
+
+  top.appendChild(titleEl);
+  top.appendChild(idEl);
+
+  const meta = document.createElement("div");
+  meta.className = "task-meta";
+  meta.textContent = `proj:${task.project_id || 0} · due:${task.due_date || "—"}`;
+
+  const actions = document.createElement("div");
+  actions.className = "task-actions";
+
+  const editBtn = document.createElement("button");
+  editBtn.textContent = "edit";
+  editBtn.className = "edit-btn";
+  editBtn.addEventListener("click", () => handleEditTask(task));
+
+  const deleteBtn = document.createElement("button");
+  deleteBtn.textContent = "delete";
+  deleteBtn.className = "delete-btn";
+  deleteBtn.addEventListener("click", () => handleDeleteTask(task.id));
+
+  actions.appendChild(editBtn);
+  actions.appendChild(deleteBtn);
+
+  card.appendChild(top);
+  card.appendChild(meta);
+  card.appendChild(actions);
+
+  return card;
+}
+
+// ── Renders whichever view is currently active, using currentTasks ──
+function renderCurrentView() {
+  if (searchedTask !== null) {
+    boardEl.hidden = true;
+    flatListEl.hidden = false;
+    renderFlatList([searchedTask]);
+    return;
+  }
+
+  if (viewMode === "lanes") {
+    flatListEl.hidden = true;
+    boardEl.hidden = false;
+    renderLaneBoard(currentTasks);
+  } else {
+    boardEl.hidden = true;
+    flatListEl.hidden = false;
+    renderFlatList(currentTasks);
+  }
+}
+
+function renderFlatList(tasks) {
+  flatListBody.textContent = "";
+
+  if (!tasks || tasks.length === 0) {
     const emptyMsg = document.createElement("p");
+    emptyMsg.className = "lane-empty";
     emptyMsg.textContent = "No tasks yet. Add one above.";
-    taskListContainer.appendChild(emptyMsg);
+    flatListBody.appendChild(emptyMsg);
     return;
   }
 
   tasks.forEach((task) => {
-    const taskItem = document.createElement("div");
-    taskItem.className = "task-item";
-    taskItem.dataset.taskId = task.id;
-
-    const infoDiv = document.createElement("div");
-    infoDiv.className = "task-info";
-
-    const titleEl = document.createElement("h3");
-    titleEl.textContent = task.title;
-
-    const metaEl = document.createElement("p");
-    metaEl.className = "task-meta";
-    metaEl.textContent = `Project #${task.project_id} · Due: ${task.due_date || "—"}`;
-
-    const priorityBadge = document.createElement("span");
-    priorityBadge.className = `priority-badge priority-${task.priority}`;
-    priorityBadge.textContent = task.priority;
-    metaEl.appendChild(priorityBadge);
-
-    infoDiv.appendChild(titleEl);
-    infoDiv.appendChild(metaEl);
-
-    const actionsDiv = document.createElement("div");
-    actionsDiv.className = "task-actions";
-
-    const editBtn = document.createElement("button");
-    editBtn.textContent = "Edit";
-    editBtn.className = "edit-btn";
-    editBtn.addEventListener("click", () => handleEditTask(task));
-
-    const deleteBtn = document.createElement("button");
-    deleteBtn.textContent = "Delete";
-    deleteBtn.className = "delete-btn";
-    deleteBtn.addEventListener("click", () => handleDeleteTask(task.id));
-
-    actionsDiv.appendChild(editBtn);
-    actionsDiv.appendChild(deleteBtn);
-
-    taskItem.appendChild(infoDiv);
-    taskItem.appendChild(actionsDiv);
-    taskListContainer.appendChild(taskItem);
+    flatListBody.appendChild(buildListCard(task));
   });
 }
 
-/**
- * Loads tasks: shows cached copy immediately, then fetches
- * the real backend list and updates once it arrives.
- */
+function renderLaneBoard(tasks) {
+  Object.values(laneBodies).forEach((el) => (el.textContent = ""));
+
+  const grouped = { high: [], medium: [], low: [] };
+  tasks.forEach((task) => {
+    if (grouped[task.priority]) grouped[task.priority].push(task);
+  });
+
+  Object.keys(grouped).forEach((priority) => {
+    const laneTasks = grouped[priority];
+    laneCounts[priority].textContent = laneTasks.length;
+
+    if (laneTasks.length === 0) {
+      const emptyMsg = document.createElement("p");
+      emptyMsg.className = "lane-empty";
+      emptyMsg.textContent = "— empty —";
+      laneBodies[priority].appendChild(emptyMsg);
+      return;
+    }
+
+    laneTasks.forEach((task) => {
+      laneBodies[priority].appendChild(buildLaneCard(task));
+    });
+  });
+}
+
+// ── Load tasks: cache first, then live backend, honoring sortBy ──
 async function loadTasks() {
   currentTasks = loadTasksFromCache();
-  renderTasks(currentTasks);
+  renderCurrentView();
 
   try {
-    const freshTasks = await fetchTasks();
+    const freshTasks =
+      sortBy === "due_date"
+        ? await fetchSortedTasks("due_date")
+        : await fetchTasks();
     currentTasks = freshTasks;
-    renderTasks(currentTasks);
-    saveTasksToCache(currentTasks);
+    renderCurrentView();
+    saveTasksToCache(freshTasks);
   } catch (err) {
     console.error("Could not load tasks from backend:", err);
   }
 }
 
-/**
- * Fetches all projects and populates the dropdown in the task form.
- */
+// ── Sort / view control buttons ──
+sortButtons.forEach((btn) => {
+  btn.addEventListener("click", async () => {
+    const action = btn.dataset.action || btn.dataset.sort;
+
+    if (action === "unsorted") {
+      viewMode = "list";
+      sortBy = "none";
+      sortButtons.forEach((b) => b.classList.remove("active"));
+      btn.classList.add("active");
+    } else if (action === "priority") {
+      viewMode = "lanes";
+      btn.classList.add("active");
+      const unsortedBtn = document.querySelector('[data-action="unsorted"], [data-sort="unsorted"]');
+      if (unsortedBtn) unsortedBtn.classList.remove("active");
+    } else if (action === "due_date") {
+      sortBy = "due_date";
+      btn.classList.add("active");
+      const unsortedBtn = document.querySelector('[data-action="unsorted"], [data-sort="unsorted"]');
+      if (unsortedBtn) unsortedBtn.classList.remove("active");
+    }
+
+    await loadTasks();
+  });
+});
+
+// ── Search control with red/green feedback & 3s timeout ──
+algoButtons.forEach((btn) => {
+  btn.addEventListener("click", () => {
+    algoButtons.forEach((b) => b.classList.remove("active"));
+    btn.classList.add("active");
+    activeAlgo = btn.dataset.algo;
+  });
+});
+
+// Helper function to display search feedback messages with 3s auto-clear timeout
+const showTemporarySearchMessage = (text, type) => {
+  searchResultMsg.textContent = text;
+  searchResultMsg.className = `search-result-msg ${type}`;
+
+  setTimeout(() => {
+    searchResultMsg.textContent = "";
+    searchResultMsg.className = "search-result-msg";
+  }, 3000); // 3 seconds timeout
+};
+
+searchBtn.addEventListener("click", async () => {
+  const title = searchInput.value.trim();
+  if (!title) {
+    showTemporarySearchMessage("enter a title to search", "error");
+    return;
+  }
+
+  searchResultMsg.textContent = `searching (${activeAlgo})...`;
+  searchResultMsg.className = "search-result-msg";
+
+  try {
+    const result = await searchTaskByTitle(title, activeAlgo);
+    if (result.found) {
+      searchedTask = result.task;
+      showTemporarySearchMessage(
+        `found: #${String(result.task.id).padStart(3, "0")} "${result.task.title}" via ${activeAlgo}_search`,
+        "success"
+      );
+      renderCurrentView();
+    } else {
+      searchedTask = null;
+      showTemporarySearchMessage(`no exact match for "${title}"`, "error");
+      renderFlatList([]);
+    }
+  } catch (err) {
+    console.error("Search failed:", err);
+    showTemporarySearchMessage("search failed — check console", "error");
+  }
+});
+
+searchInput.addEventListener("input", () => {
+  if (searchInput.value.trim() === "") {
+    searchedTask = null;
+    searchResultMsg.textContent = "";
+    searchResultMsg.className = "search-result-msg";
+    renderCurrentView();
+  }
+});
+
+searchInput.addEventListener("keydown", (e) => {
+  if (e.key === "Enter") searchBtn.click();
+});
+
+clearSearchBtn.addEventListener("click", () => {
+  searchInput.value = "";
+  searchResultMsg.textContent = "";
+  searchResultMsg.className = "search-result-msg";
+  searchedTask = null;
+  renderCurrentView();
+});
+
+// ── Project dropdown ──
 async function loadProjectsIntoDropdown() {
   try {
     const response = await fetch(`${API_BASE_URL}/projects/`);
@@ -107,7 +379,7 @@ async function loadProjectsIntoDropdown() {
     taskProjectSelect.textContent = "";
     const placeholderOption = document.createElement("option");
     placeholderOption.value = "";
-    placeholderOption.textContent = "Select a project...";
+    placeholderOption.textContent = "Select...";
     taskProjectSelect.appendChild(placeholderOption);
 
     projects.forEach((project) => {
@@ -121,17 +393,28 @@ async function loadProjectsIntoDropdown() {
   }
 }
 
-/**
- * Handles create-user form submission.
- */
+// ── Create user with green/red messaging (with 3s auto-clear timeout) ──
 addUserForm.addEventListener("submit", async (event) => {
   event.preventDefault();
+  userFormMsg.textContent = "";
+  userFormMsg.className = "form-feedback-msg";
 
   const name = userNameInput.value.trim();
   const email = userEmailInput.value.trim();
 
+  // Helper function to show message and set 3 second timeout
+  const showTemporaryMessage = (text, type) => {
+    userFormMsg.textContent = text;
+    userFormMsg.className = `form-feedback-msg ${type}`;
+
+    setTimeout(() => {
+      userFormMsg.textContent = "";
+      userFormMsg.className = "form-feedback-msg";
+    }, 3000); // 3 seconds timeout
+  };
+
   if (!name || !email) {
-    alert("Please enter both a name and an email.");
+    showTemporaryMessage("Both name and email fields are required.", "error");
     return;
   }
 
@@ -142,31 +425,48 @@ addUserForm.addEventListener("submit", async (event) => {
       body: JSON.stringify({ name, email }),
     });
 
-    if (!response.ok) {
-      const errorBody = await response.json().catch(() => ({}));
-      throw new Error(errorBody.detail ? JSON.stringify(errorBody.detail) : "Failed to create user");
-    }
+    if (response.ok || response.status === 201) {
+      let createdUser = {};
+      try { createdUser = await response.json(); } catch (e) {}
 
-    const createdUser = await response.json();
-    lastCreatedUserIdEl.textContent = `Created user "${createdUser.name}" — ID: ${createdUser.id}`;
-    addUserForm.reset();
+      const userIdText = createdUser.id ? ` (User ID: ${createdUser.id})` : "";
+      showTemporaryMessage(`User created successfully!${userIdText}`, "success");
+      addUserForm.reset();
+    } else {
+      const errorBody = await response.json().catch(() => ({}));
+      const errorDetail = errorBody.detail || "Failed to create user. Email might already exist.";
+      const msgText = typeof errorDetail === "string" ? errorDetail : JSON.stringify(errorDetail);
+      showTemporaryMessage(msgText, "error");
+    }
   } catch (err) {
     console.error("Failed to create user:", err);
-    alert("Failed to create user. Check the console for details — email might already be in use.");
+    showTemporaryMessage("Network error while creating user.", "error");
   }
 });
 
-/**
- * Handles create-project form submission.
- */
+
+// ── Create project with green/red messaging (with 3s auto-clear timeout) ──
 addProjectForm.addEventListener("submit", async (event) => {
   event.preventDefault();
+  projectFormMsg.textContent = "";
+  projectFormMsg.className = "form-feedback-msg";
 
   const name = projectNameInput.value.trim();
   const ownerId = parseInt(projectOwnerIdInput.value, 10);
 
+  // Helper function to display message and automatically clear it after 3 seconds
+  const showTemporaryMessage = (text, type) => {
+    projectFormMsg.textContent = text;
+    projectFormMsg.className = `form-feedback-msg ${type}`;
+
+    setTimeout(() => {
+      projectFormMsg.textContent = "";
+      projectFormMsg.className = "form-feedback-msg";
+    }, 3000); // 3 seconds timeout
+  };
+
   if (!name || !ownerId) {
-    alert("Please enter both a project name and owner user ID.");
+    showTemporaryMessage("All fields are required to create a project.", "error");
     return;
   }
 
@@ -177,36 +477,46 @@ addProjectForm.addEventListener("submit", async (event) => {
       body: JSON.stringify({ name, owner_id: ownerId }),
     });
 
-    if (!response.ok) {
-      const errorBody = await response.json().catch(() => ({}));
-      throw new Error(errorBody.detail ? JSON.stringify(errorBody.detail) : "Failed to create project");
+    if (response.ok || response.status === 201) {
+      showTemporaryMessage("Project created successfully!", "success");
+      addProjectForm.reset();
+      await loadProjectsIntoDropdown();
+    } else {
+      showTemporaryMessage("Failed to create project. Verify Owner User ID.", "error");
     }
-
-    addProjectForm.reset();
-    await loadProjectsIntoDropdown();
   } catch (err) {
     console.error("Failed to create project:", err);
-    alert("Failed to create project. Check the console for details.");
+    showTemporaryMessage("Failed to create project.", "error");
   }
 });
 
-/**
- * Handles add-task form submission.
- */
+// ── Add task — with 3s auto-clear timeout for messages ──
 addTaskForm.addEventListener("submit", async (event) => {
   event.preventDefault();
+  taskFormMsg.textContent = "";
+  taskFormMsg.className = "form-feedback-msg full-width-msg";
+
+  // Helper function to display message and clear it after 3 seconds
+  const showTemporaryMessage = (text, type, onComplete = null) => {
+    taskFormMsg.textContent = text;
+    taskFormMsg.className = `form-feedback-msg full-width-msg ${type}`;
+
+    setTimeout(() => {
+      taskFormMsg.textContent = "";
+      taskFormMsg.className = "form-feedback-msg full-width-msg";
+      if (onComplete) onComplete();
+    }, 3000); // 3 seconds timeout
+  };
 
   const title = titleInput.value.trim();
-
   if (!title) {
-    titleError.textContent = "Title cannot be empty.";
+    showTemporaryMessage("Title field cannot be empty.", "error");
     return;
   }
-  titleError.textContent = "";
 
   const projectId = parseInt(projectIdInput.value, 10);
   if (!projectId) {
-    alert("Please select a project.");
+    showTemporaryMessage("Please select a project for the task.", "error");
     return;
   }
 
@@ -218,30 +528,26 @@ addTaskForm.addEventListener("submit", async (event) => {
   };
 
   try {
-    const createdTask = await createTaskAPI(newTaskData);
-    currentTasks.push(createdTask);
-    renderTasks(currentTasks);
-    saveTasksToCache(currentTasks);
+    await createTaskAPI(newTaskData);
+    await loadTasks();
     addTaskForm.reset();
     priorityInput.value = "medium";
+
+    showTemporaryMessage("Task added successfully!", "success", () => {
+      addTaskForm.hidden = true;
+      quickAddToggle.textContent = "+ New Task";
+    });
   } catch (err) {
     console.error("Failed to create task:", err);
-    alert("Failed to create task. Check the console for details.");
+    showTemporaryMessage("Failed to create task. Check the console.", "error");
   }
 });
 
-/**
- * Removes the error message once the title field becomes valid.
- */
 titleInput.addEventListener("input", () => {
-  if (titleInput.value.trim()) {
-    titleError.textContent = "";
-  }
+  if (titleInput.value.trim()) taskFormMsg.textContent = "";
 });
 
-/**
- * Handles editing a task — simple prompt-based edit for the title.
- */
+// ── Edit / delete ──
 async function handleEditTask(task) {
   const newTitle = prompt("Edit task title:", task.title);
   if (newTitle === null) return;
@@ -253,34 +559,27 @@ async function handleEditTask(task) {
   }
 
   try {
-    const updatedTask = await updateTaskAPI(task.id, { title: trimmedTitle });
-    currentTasks = currentTasks.map((t) => (t.id === task.id ? updatedTask : t));
-    renderTasks(currentTasks);
-    saveTasksToCache(currentTasks);
+    await updateTaskAPI(task.id, { title: trimmedTitle });
+    await loadTasks();
   } catch (err) {
     console.error("Failed to update task:", err);
     alert("Failed to update task.");
   }
 }
 
-/**
- * Handles deleting a task.
- */
 async function handleDeleteTask(taskId) {
   const confirmed = confirm("Delete this task?");
   if (!confirmed) return;
 
   try {
     await deleteTaskAPI(taskId);
-    currentTasks = currentTasks.filter((t) => t.id !== taskId);
-    renderTasks(currentTasks);
-    saveTasksToCache(currentTasks);
+    await loadTasks();
   } catch (err) {
     console.error("Failed to delete task:", err);
     alert("Failed to delete task.");
   }
 }
 
-// Initial load on page open
+// ── Initial load ──
 loadTasks();
 loadProjectsIntoDropdown();

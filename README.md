@@ -1,3 +1,176 @@
+# TaskFlow — Full-Stack Task Management Platform
+
+An internal task-and-project management platform built for Blinkit's dark-store engineering pods. Combines a FastAPI + SQLAlchemy backend, a vanilla JS dashboard, a hand-rolled sorting/search engine, and an AI-assisted quick-add feature — all operating on the same three-table database (users, projects, tasks).
+
+## Environment Setup
+
+1. Clone the repository and navigate into it:
+```bash
+   git clone <your-repo-url>
+   cd taskflow
+```
+
+2. Create and activate a virtual environment:
+```bash
+   python -m venv venv
+   # Windows:
+   venv\Scripts\Activate.ps1
+   # macOS/Linux:
+   source venv/bin/activate
+```
+
+3. Install dependencies:
+```bash
+   pip install -r requirements.txt
+```
+
+4. Create a `.env` file in the project root with:
+
+DATABASE_URL=postgresql://postgres:[YOUR-PASSWORD]@db.xxxxxxxxxxxx.supabase.co:5432/postgres
+USE_REAL_LLM=false
+GROK_API_KEY=
+
+(`GROK_API_KEY` is only needed if you want to test the optional real-LLM path — leave `USE_REAL_LLM=false` for normal/graded use, which requires zero API keys.)
+
+## Running the App (Two-Process Run)
+
+**Terminal 1 — start the backend:**
+```bash
+uvicorn backend.main:app --reload
+```
+Runs on `http://127.0.0.1:8000`.
+
+**Terminal 2 — start the frontend:**
+```bash
+cd frontend
+python -m http.server 3000
+```
+Runs on `http://127.0.0.1:3000`. Open this URL in your browser.
+
+The backend's CORS configuration (`backend/main.py`) is already set to allow requests from `http://127.0.0.1:3000` and `http://localhost:3000`. If you serve the frontend from a different port, update the `allow_origins` list in `main.py` to match.
+
+## Database Schema
+
+Three tables, defined as SQLAlchemy models in `backend/models/`:
+
+- **users**: `id` (PK), `name`, `email` (UNIQUE, NOT NULL)
+- **projects**: `id` (PK), `name`, `owner_id` (FK → users.id)
+- **tasks**: `id` (PK), `title` (NOT NULL), `priority` (CHECK: 'low'/'medium'/'high'), `due_date` (nullable text), `project_id` (FK → projects.id)
+
+## API Endpoints
+
+Base URL: `http://127.0.0.1:8000`
+
+### Users
+
+**Create user** — `POST /users/`
+```json
+// Request
+{ "name": "Priya Sharma", "email": "priya@blinkit.com" }
+// Response (201)
+{ "id": 1, "name": "Priya Sharma", "email": "priya@blinkit.com" }
+```
+
+**List users** — `GET /users/`
+```json
+// Response (200)
+[{ "id": 1, "name": "Priya Sharma", "email": "priya@blinkit.com" }]
+```
+
+### Projects
+
+**Create project** — `POST /projects/`
+```json
+// Request
+{ "name": "Dark Store Ops", "owner_id": 1 }
+// Response (201)
+{ "id": 1, "name": "Dark Store Ops", "owner_id": 1 }
+```
+
+**List projects** — `GET /projects/`
+```json
+// Response (200)
+[{ "id": 1, "name": "Dark Store Ops", "owner_id": 1 }]
+```
+
+**Get project by id** — `GET /projects/{id}`
+```json
+// Response (200)
+{ "id": 1, "name": "Dark Store Ops", "owner_id": 1 }
+// 404 if not found: { "detail": "Project not found" }
+```
+
+**Project statistics** — `GET /projects/{id}/stats`
+```json
+// Response (200)
+{ "project_id": 1, "total_tasks": 3, "by_priority": { "high": 1, "medium": 2 } }
+```
+
+### Tasks
+
+**Create task** — `POST /tasks/`
+```json
+// Request
+{ "title": "Restock shelves", "priority": "high", "due_date": "tomorrow", "project_id": 1 }
+// Response (201)
+{ "id": 1, "title": "Restock shelves", "priority": "high", "due_date": "tomorrow", "project_id": 1 }
+```
+
+**List tasks** — `GET /tasks/`
+```json
+// Response (200)
+[{ "id": 1, "title": "Restock shelves", "priority": "high", "due_date": "tomorrow", "project_id": 1 }]
+```
+
+**Get task by id** — `GET /tasks/{id}`
+```json
+// Response (200)
+{ "id": 1, "title": "Restock shelves", "priority": "high", "due_date": "tomorrow", "project_id": 1 }
+// 404 if not found: { "detail": "Task not found" }
+```
+
+**Update task** — `PUT /tasks/{id}`
+```json
+// Request
+{ "title": "Restock shelves urgently" }
+// Response (200)
+{ "id": 1, "title": "Restock shelves urgently", "priority": "high", "due_date": "tomorrow", "project_id": 1 }
+```
+
+**Delete task** — `DELETE /tasks/{id}`
+```json
+// Response (200)
+{ "message": "Task deleted", "id": 1 }
+```
+
+**Sorted list (Section 2)** — `GET /tasks?sort=priority` (or `sort=due_date`)
+```json
+// Response (200) — sorted using our own insertion_sort, not built-in sort or ORDER BY
+[
+  { "id": 3, "title": "Low priority task", "priority": "low", "due_date": null, "project_id": 1 },
+  { "id": 1, "title": "Restock shelves", "priority": "high", "due_date": "tomorrow", "project_id": 1 }
+]
+```
+
+**Search (Section 2)** — `GET /tasks/search?title=Restock shelves&algo=binary` (or `algo=linear`)
+```json
+// Response (200)
+{ "id": 1, "title": "Restock shelves", "priority": "high", "due_date": "tomorrow", "project_id": 1 }
+// 404 if no exact match: { "detail": "No task found with that exact title" }
+```
+
+**AI Quick-Add (Section 3)** — `POST /tasks/quick-add`
+```json
+// Request
+{ "description": "This is urgent, mark it ASAP please", "project_id": 1 }
+// Response (201)
+{ "id": 8, "title": "This is , mark it  please", "priority": "high", "due_date": null, "project_id": 1 }
+// 422 if project_id doesn't exist or body is malformed
+```
+
+---
+
+
 Algorithm Complexity & Benchmark Analysis
 
 Time Complexity:

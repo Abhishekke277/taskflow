@@ -3,69 +3,83 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>TaskFlow Dashboard</title>
+  <title>TaskFlow — Dark Store Ops</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/styles.css" />
 </head>
 <body>
 
+  <!-- ── Header / control bar ── -->
   <header class="app-header">
-    <h1>TaskFlow</h1>
-    <p class="subtitle">Dark-store engineering task dashboard</p>
+    <div class="brand">
+      <span class="brand-mark">TASKFLOW</span>
+      <span class="brand-sub">DARK STORE OPS · CONTROL PANEL</span>
+    </div>
+    
+    <div class="header-actions">
+      <!-- Dark / Light Theme Toggle -->
+      <button id="theme-toggle-btn" class="theme-toggle-btn" aria-label="Toggle Theme">
+        <span id="theme-icon">🌙</span> <span id="theme-text">Dark</span>
+      </button>
+
+      <button id="setup-toggle-btn" class="setup-toggle-btn" aria-expanded="false" aria-controls="setup-panel">
+        <span class="setup-icon">⚙</span> Setup
+        <span class="chevron">▾</span>
+      </button>
+    </div>
   </header>
 
-  <main class="app-main">
+  <!-- ── Collapsible setup panel ── -->
+  <section id="setup-panel" class="setup-panel" hidden>
+    <div class="setup-grid">
 
-    <!-- Create user form -->
-    <section class="add-user-section" aria-labelledby="add-user-heading">
-      <h2 id="add-user-heading">Create a User</h2>
-      <form id="add-user-form" novalidate>
+      <form id="add-user-form" class="setup-form" novalidate>
+        <h3>Create User</h3>
         <div class="form-group">
           <label for="user-name">Name</label>
           <input type="text" id="user-name" name="name" placeholder="e.g. Priya Sharma" />
         </div>
-
         <div class="form-group">
           <label for="user-email">Email</label>
-          <input type="email" id="user-email" name="email" placeholder="e.g. priya@blinkit.com" />
+          <input type="email" id="user-email" name="email" placeholder="priya@blinkit.com" />
         </div>
-
         <button type="submit" class="create_btn">Create User</button>
+        <p id="user-form-msg" class="form-feedback-msg"></p>
       </form>
-      <p class="hint">Created user's ID will appear here — use it as "Owner User ID" below.</p>
-      <p id="last-created-user-id" class="hint"></p>
-    </section>
 
-    <!-- Create project form -->
-    <section class="add-project-section" aria-labelledby="add-project-heading">
-      <h2 id="add-project-heading">Create a Project</h2>
-      <form id="add-project-form" novalidate>
+      <form id="add-project-form" class="setup-form" novalidate>
+        <h3>Create Project</h3>
         <div class="form-group">
           <label for="project-name">Project Name</label>
           <input type="text" id="project-name" name="name" placeholder="e.g. Dark Store Ops" />
         </div>
-
         <div class="form-group">
           <label for="project-owner-id">Owner User ID</label>
           <input type="number" id="project-owner-id" name="owner_id" placeholder="e.g. 1" />
         </div>
-
         <button type="submit" class="create_btn">Create Project</button>
+        <p id="project-form-msg" class="form-feedback-msg"></p>
       </form>
-    </section>
 
-    <!-- Sticky add-task form -->
-    <section class="add-task-section" aria-labelledby="add-task-heading">
-      <h2 id="add-task-heading">Add a Task</h2>
-      <form id="add-task-form" novalidate>
-        <div class="form-group">
+    </div>
+  </section>
+
+  <main class="app-main">
+
+    <!-- ── Quick add-task bar ── -->
+    <section class="quick-add-section">
+      <button type="button" id="quick-add-toggle" class="quick-add-toggle">+ New Task</button>
+
+      <form id="add-task-form" class="add-task-form" novalidate hidden>
+        <div class="form-group grow">
           <label for="task-title">Title</label>
           <input type="text" id="task-title" name="title" placeholder="e.g. Restock shelves" />
-          <span class="error-message" id="title-error"></span>
         </div>
 
         <div class="form-group">
-          <label for="task-due-date">Due date (or phrase like "next friday")</label>
-          <input type="text" id="task-due-date" name="due_date" placeholder="e.g. tomorrow" />
+          <label for="task-due-date">Due</label>
+          <input type="text" id="task-due-date" name="due_date" placeholder="1 days / tomorrow" />
         </div>
 
         <div class="form-group">
@@ -80,18 +94,94 @@
         <div class="form-group">
           <label for="task-project-id">Project</label>
           <select id="task-project-id" name="project_id">
-            <option value="">Select a project...</option>
+            <option value="">Select...</option>
           </select>
         </div>
 
-        <button type="submit">Add Task</button>
+        <div class="form-group button-group">
+          <button type="submit" class="create_btn">Add Task</button>
+        </div>
+        <p id="task-form-msg" class="form-feedback-msg full-width-msg"></p>
       </form>
     </section>
 
-    <!-- Task list container -->
-    <section class="task-list-section" aria-labelledby="task-list-heading">
-      <h2 id="task-list-heading">Tasks</h2>
-      <div id="task-list-container"></div>
+    <!-- ── Command bar ── -->
+    <section class="command-bar" aria-label="Search and sort controls">
+
+      <!-- Search Line -->
+      <div class="command-line">
+        <span class="prompt">&gt;</span>
+
+        <input 
+          type="text" 
+          id="search-input" 
+          placeholder="search exact task title..." 
+          autocomplete="off" 
+        />
+
+        <div class="algo-toggle" role="group" aria-label="Search Algorithm">
+          <button type="button" class="algo-btn active" data-algo="binary">binary</button>
+          <button type="button" class="algo-btn" data-algo="linear">linear</button>
+        </div>
+
+        <button type="button" id="search-btn" class="term-btn">run search</button>
+        <button type="button" id="clear-search-btn" class="term-btn ghost">clear</button>
+      </div>
+
+      <!-- Sort Line -->
+      <div class="command-line">
+        <span class="prompt">sort</span>
+
+        <div class="algo-toggle" role="group" aria-label="Sort field">
+          <button type="button" class="sort-btn active" data-sort="unsorted">unsorted</button>
+          <button type="button" class="sort-btn" data-sort="priority">priority</button>
+          <button type="button" class="sort-btn" data-sort="due_date">due date</button>
+        </div>
+
+        <span class="sort-hint">
+          sorted via <code>insertion_sort()</code>
+        </span>
+      </div>
+
+      <p id="search-result-msg" class="search-result-msg"></p>
+
+    </section>
+
+    <!-- ── Default & Due Date Flat List View (Image 1 Style) ── -->
+    <section class="sorted-list-section" id="sorted-list-section">
+      <div class="sorted-list-header">
+        <span class="sorted-list-label" id="list-view-label">TASKS</span>
+      </div>
+      <div class="sorted-list-body" id="sorted-list-body"></div>
+    </section>
+
+    <!-- ── Priority Board (Image 2 Style - 3 Lanes) ── -->
+    <section class="board" id="priority-board" hidden>
+
+      <div class="lane" data-priority="high">
+        <div class="lane-header lane-high">
+          <span class="lane-label">HIGH</span>
+          <span class="lane-count" id="count-high">0</span>
+        </div>
+        <div class="lane-body" id="lane-high"></div>
+      </div>
+
+      <div class="lane" data-priority="medium">
+        <div class="lane-header lane-medium">
+          <span class="lane-label">MEDIUM</span>
+          <span class="lane-count" id="count-medium">0</span>
+        </div>
+        <div class="lane-body" id="lane-medium"></div>
+      </div>
+
+      <div class="lane" data-priority="low">
+        <div class="lane-header lane-low">
+          <span class="lane-label">LOW</span>
+          <span class="lane-count" id="count-low">0</span>
+        </div>
+        <div class="lane-body" id="lane-low"></div>
+      </div>
+
     </section>
 
   </main>

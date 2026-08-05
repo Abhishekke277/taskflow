@@ -63,9 +63,16 @@ def list_tasks(
         for t in task_dicts:
             del t["_priority_rank"]
     else:
-        # sort == "due_date" — sorts by the raw text value directly
-        insertion_sort(task_dicts, key="due_date")
-
+        # sort == "due_date" — None values need a comparable substitute,
+        # since insertion_sort can't compare str > NoneType. Tasks with
+        # no due date sort to the end (using "~", which is ASCII-higher
+        # than any typical lowercase letter or digit).
+        for t in task_dicts:
+            t["_due_date_sort_key"] = t["due_date"] if t["due_date"] is not None else "~"
+        insertion_sort(task_dicts, key="_due_date_sort_key")
+        for t in task_dicts:
+            del t["_due_date_sort_key"]
+            
     return task_dicts
 
 
