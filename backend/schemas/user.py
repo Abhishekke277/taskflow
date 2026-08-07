@@ -14,4 +14,4 @@ class UserResponse(BaseModel):
     class Config:
         # Allows Pydantic to read data directly from SQLAlchemy
         # model instances (ORM objects), not just dicts
-        from_attributes = True
+        from_attributes = True #means that Pydantic will read data directly from SQLAlchemy model instances (ORM objects), not just dicts. This is useful when you want to return ORM objects from your database queries and have Pydantic automatically convert them into response models.
