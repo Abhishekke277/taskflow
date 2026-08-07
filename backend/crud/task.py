@@ -1,6 +1,7 @@
 from sqlalchemy.orm import Session
 from backend.models.task import Task
 from backend.schemas.task import TaskCreate, TaskUpdate
+from backend.models.project import Project
 
 
 def create_task(db: Session, task: TaskCreate) -> Task:
@@ -47,3 +48,30 @@ def delete_task(db: Session, task_id: int):
     db.delete(db_task)
     db.commit()
     return db_task
+
+
+
+def get_task_by_id_for_owner(db: Session, task_id: int, owner_id: int):
+    """
+    Returns the task only if it belongs to a project owned by owner_id.
+    Returns None if the task doesn't exist OR belongs to someone else's
+    project — the router treats both cases as 404, so an attacker can't
+    tell the difference between "doesn't exist" and "not yours".
+    """
+    return (
+        db.query(Task)
+        .join(Project, Task.project_id == Project.id)
+        .filter(Task.id == task_id, Project.owner_id == owner_id)
+        .first()
+    )
+
+
+def get_tasks_for_owner(db: Session, owner_id: int, skip: int = 0, limit: int = 100):
+    return (
+        db.query(Task)
+        .join(Project, Task.project_id == Project.id)
+        .filter(Project.owner_id == owner_id)
+        .offset(skip)
+        .limit(limit)
+        .all()
+    )

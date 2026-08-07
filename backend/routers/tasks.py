@@ -4,98 +4,85 @@ from sqlalchemy.orm import Session
 from backend.database import get_db
 from backend.schemas.task import TaskCreate, TaskUpdate, TaskResponse
 from backend.crud import task as task_crud
+from backend.crud import project as project_crud
 from backend.algorithms.sorting import insertion_sort
 from backend.algorithms.searching import binary_search, linear_search
+from backend.models.user import User
+from backend.auth.dependencies import get_current_user
 import re
 
 router = APIRouter(prefix="/tasks", tags=["tasks"])
 
-# Maps priority strings to comparable numeric ranks for sorting
 PRIORITY_RANK = {"low": 1, "medium": 2, "high": 3}
 
 
-@router.post("/", response_model=TaskResponse, status_code=201)
-def create_task(task: TaskCreate, db: Session = Depends(get_db)):
-    return task_crud.create_task(db, task)
-
-
 def due_date_sort_key(due_date_value):
-    """
-    Converts a raw due_date text value into a comparable sort key.
-    Numeric day-phrases ("2 days", "10", ".5 day") sort by magnitude;
-    "today"/"tomorrow" sort first; other free-text phrases (like
-    "next friday") sort alphabetically after the numeric ones;
-    None (no due date) always sorts last.
-    """
     if due_date_value is None:
         return (2, 0)
-
     text = due_date_value.strip().lower()
-
     if text == "today":
         return (0, 0)
     if text == "tomorrow":
         return (0, 1)
-
     match = re.match(r"^\.?\d+(\.\d+)?", text)
     if match:
         return (0, float(match.group()))
-
     return (1, text)
+
+
+def _verify_project_ownership(db: Session, project_id: int, current_user: User):
+    """Raises 422/403 if project_id doesn't exist or isn't the user's."""
+    project = project_crud.get_project_by_id(db, project_id)
+    if project is None:
+        raise HTTPException(status_code=422, detail=f"project_id {project_id} does not reference an existing project")
+    if project.owner_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Not your project")
+
+
+@router.post("/", response_model=TaskResponse, status_code=201)
+def create_task(
+    task: TaskCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    _verify_project_ownership(db, task.project_id, current_user)
+    return task_crud.create_task(db, task)
+
 
 @router.get("/", response_model=list[TaskResponse])
 def list_tasks(
     skip: int = 0,
     limit: int = 100,
-    sort: Optional[str] = Query(default=None, description="Sort by 'priority' or 'due_date'"),
+    sort: Optional[str] = Query(default=None),
     db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
-    """
-    Lists tasks. If ?sort=priority or ?sort=due_date is provided,
-    the results are sorted using our own insertion_sort — never
-    Python's built-in sorted()/list.sort(), never the database's
-    ORDER BY. Without ?sort=, returns tasks in default DB order.
-    """
-    tasks = task_crud.get_tasks(db, skip, limit)
+    tasks = task_crud.get_tasks_for_owner(db, owner_id=current_user.id, skip=skip, limit=limit)
 
     if sort not in ("priority", "due_date", None):
-        raise HTTPException(
-            status_code=422,
-            detail="sort must be either 'priority' or 'due_date'"
-        )
+        raise HTTPException(status_code=422, detail="sort must be either 'priority' or 'due_date'")
 
     if sort is None:
         return tasks
 
-    # Convert ORM objects to plain dicts — insertion_sort operates
-    # on dictionaries, not SQLAlchemy model instances
     task_dicts = [
-        {
-            "id": t.id,
-            "title": t.title,
-            "priority": t.priority,
-            "due_date": t.due_date,
-            "project_id": t.project_id,
-        }
+        {"id": t.id, "title": t.title, "priority": t.priority, "due_date": t.due_date, "project_id": t.project_id}
         for t in tasks
     ]
 
     if sort == "priority":
-        # Map priority string to a comparable numeric rank before sorting
         for t in task_dicts:
             t["_priority_rank"] = PRIORITY_RANK.get(t["priority"], 0)
         insertion_sort(task_dicts, key="_priority_rank")
         for t in task_dicts:
             del t["_priority_rank"]
     else:
-        # sort == "due_date" — numeric-aware sort key (see due_date_sort_key)
-        # so "10 days" sorts after "2 days", not lexicographically before it
         for t in task_dicts:
             t["_due_date_sort_key"] = due_date_sort_key(t["due_date"])
         insertion_sort(task_dicts, key="_due_date_sort_key")
         for t in task_dicts:
             del t["_due_date_sort_key"]
-            
+
     return task_dicts
 
 
@@ -104,24 +91,12 @@ def search_tasks(
     title: str = Query(...),
     algo: str = Query(default="binary"),
     db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
-    """
-    Builds an in-memory index of {"id", "title"} pairs from the real
-    tasks in the database, then locates the exact-title match using
-    binary_search (after sorting the index with insertion_sort) when
-    algo=binary, or linear_search over the unsorted index when
-    algo=linear. Returns the matching task (200) or 404.
-
-    IMPORTANT: this route must be defined before GET /{task_id},
-    otherwise FastAPI would treat "search" as a task_id value.
-    """
     if algo not in ("binary", "linear"):
-        raise HTTPException(
-            status_code=422,
-            detail="algo must be either 'binary' or 'linear'"
-        )
+        raise HTTPException(status_code=422, detail="algo must be either 'binary' or 'linear'")
 
-    tasks = task_crud.get_tasks(db, skip=0, limit=1000000)
+    tasks = task_crud.get_tasks_for_owner(db, owner_id=current_user.id, skip=0, limit=1000000)
     index = [{"id": t.id, "title": t.title} for t in tasks]
 
     if algo == "binary":
@@ -134,36 +109,47 @@ def search_tasks(
         raise HTTPException(status_code=404, detail="No task found with that exact title")
 
     matched_id = index[found_position]["id"]
-    matched_task = task_crud.get_task_by_id(db, matched_id)
+    matched_task = task_crud.get_task_by_id_for_owner(db, matched_id, current_user.id)
 
     return {
-        "id": matched_task.id,
-        "title": matched_task.title,
-        "priority": matched_task.priority,
-        "due_date": matched_task.due_date,
-        "project_id": matched_task.project_id,
+        "id": matched_task.id, "title": matched_task.title, "priority": matched_task.priority,
+        "due_date": matched_task.due_date, "project_id": matched_task.project_id,
     }
 
 
 @router.get("/{task_id}", response_model=TaskResponse)
-def get_task(task_id: int, db: Session = Depends(get_db)):
-    task = task_crud.get_task_by_id(db, task_id)
+def get_task(
+    task_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    task = task_crud.get_task_by_id_for_owner(db, task_id, current_user.id)
     if task is None:
         raise HTTPException(status_code=404, detail="Task not found")
     return task
 
 
 @router.put("/{task_id}", response_model=TaskResponse)
-def update_task(task_id: int, task_update: TaskUpdate, db: Session = Depends(get_db)):
-    task = task_crud.update_task(db, task_id, task_update)
-    if task is None:
+def update_task(
+    task_id: int,
+    task_update: TaskUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    existing = task_crud.get_task_by_id_for_owner(db, task_id, current_user.id)
+    if existing is None:
         raise HTTPException(status_code=404, detail="Task not found")
-    return task
+    return task_crud.update_task(db, task_id, task_update)
 
 
 @router.delete("/{task_id}", status_code=200)
-def delete_task(task_id: int, db: Session = Depends(get_db)):
-    task = task_crud.delete_task(db, task_id)
-    if task is None:
+def delete_task(
+    task_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    existing = task_crud.get_task_by_id_for_owner(db, task_id, current_user.id)
+    if existing is None:
         raise HTTPException(status_code=404, detail="Task not found")
+    task_crud.delete_task(db, task_id)
     return {"message": "Task deleted", "id": task_id}
