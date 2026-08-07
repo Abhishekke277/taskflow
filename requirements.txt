@@ -7,3 +7,6 @@ python-multipart
 psycopg2-binary
 python-dotenv
 openai
+passlib[bcrypt]
+bcrypt==4.0.1
+python-jose[cryptography]

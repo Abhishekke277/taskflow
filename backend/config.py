@@ -13,3 +13,8 @@ USE_REAL_LLM: bool = os.getenv("USE_REAL_LLM", "false").lower() == "true"
 
 # Grok (xAI) API key — only used if USE_REAL_LLM is True
 GROK_API_KEY: str = os.getenv("GROK_API_KEY", "")
+
+# JWT settings for authentication
+SECRET_KEY: str = os.getenv("SECRET_KEY", "change-this-in-production")
+ALGORITHM: str = "HS256"
+ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24  # 24 hours
