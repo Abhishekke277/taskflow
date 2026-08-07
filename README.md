@@ -220,3 +220,9 @@ If TaskFlow later needed to handle more ambiguous, free-form task descriptions (
 | 3 | `urgent: fix the payment bug asap` | `{'title': ': fix the payment bug', 'priority': 'high', 'due_date_hint': None}` |
 | 4 | `low priority - clean up old logs` | `{'title': '- clean up old logs', 'priority': 'low', 'due_date_hint': None}` |
 | 5 | `Review PR on Sunday` | `{'title': 'Review PR on', 'priority': 'medium', 'due_date_hint': 'sunday'}` |
+
+**Note on due-date sorting**: since `due_date` is intentionally a free-text 
+column (supporting both real dates and AI-parsed phrases like "next friday"), 
+the sort uses a numeric-aware heuristic: "today"/"tomorrow" sort first, 
+numeric day-counts ("2 days", "10") sort by magnitude, other text phrases 
+sort alphabetically, and tasks with no due date sort last.

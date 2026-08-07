@@ -677,6 +677,11 @@ body {
 @media (max-width: 768px) {
   .board { grid-template-columns: 1fr; }
   .add-task-form { flex-direction: column; align-items: stretch; }
+  .add-task-form .form-group,
+  .add-task-form .form-group.grow {
+    flex: 1 1 auto;
+    width: 100%;
+  }
   .add-task-form .create_btn { width: 100%; }
 }
 
