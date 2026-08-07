@@ -3,7 +3,7 @@ from pydantic import BaseModel
 
 class ProjectCreate(BaseModel):
     name: str
-    owner_id: int
+    # owner_id removed — now taken automatically from the logged-in user's token
 
 
 class ProjectResponse(BaseModel):

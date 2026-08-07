@@ -48,3 +48,21 @@ def get_project_stats(db: Session, project_id: int):
         "total_tasks": total_count,
         "by_priority": {priority: count for priority, count in by_priority}, #Convert list of tuples to dictionary example: [("high", 3), ("medium", 5), ("low", 2)] -> {"high": 3, "medium": 5, "low": 2}
     }
+
+    
+def create_project_for_owner(db: Session, project: ProjectCreate, owner_id: int) -> Project:
+    db_project = Project(name=project.name, owner_id=owner_id)
+    db.add(db_project)
+    db.commit()
+    db.refresh(db_project)
+    return db_project
+
+
+def get_projects_for_owner(db: Session, owner_id: int, skip: int = 0, limit: int = 100):
+    return (
+        db.query(Project)
+        .filter(Project.owner_id == owner_id)
+        .offset(skip)
+        .limit(limit)
+        .all()
+    )
