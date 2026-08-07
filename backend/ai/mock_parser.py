@@ -15,8 +15,8 @@ def parse_task_description(description: str) -> dict:
     # Group (ii) keywords — checked second
     low_keywords = ["whenever", "low priority"]
 
-    matched_high = [kw for kw in high_keywords if kw in lowered]
-    matched_low = [kw for kw in low_keywords if kw in lowered]
+    matched_high = [kw for kw in high_keywords if kw in lowered] #outputs a list of all the keywords from high_keywords that are found in the lowered description. If any of these keywords are present, it indicates that the task has a high priority.
+    matched_low = [kw for kw in low_keywords if kw in lowered] #outputs a list of all the keywords from low_keywords that are found in the lowered description. If any of these keywords are present, it indicates that the task has a low priority.
 
     if matched_high:
         priority = "high"

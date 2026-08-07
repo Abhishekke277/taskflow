@@ -1,10 +1,10 @@
 import time
 import logging
-from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.middleware.base import BaseHTTPMiddleware #BaseHTTPMiddleware is a base class for creating custom middleware in Starlette/FastAPI. It provides a convenient way to define middleware that can process requests and responses.
 from starlette.requests import Request
 
 # Basic logger setup — prints to console
-logging.basicConfig(level=logging.INFO, format="%(message)s")
+logging.basicConfig(level=logging.INFO, format="%(message)s") #this configures the logging module to log messages at the INFO level or higher, and it sets the format of the log messages to just display the message itself without any additional metadata like timestamps or log levels.
 logger = logging.getLogger("taskflow")
 
 
