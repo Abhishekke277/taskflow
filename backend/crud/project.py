@@ -1,4 +1,4 @@
-from sqlalchemy import func
+from sqlalchemy import func #func means SQL functions like COUNT, SUM, AVG, etc. — used in get_project_stats
 from sqlalchemy.orm import Session
 from backend.models.project import Project
 from backend.models.task import Task
@@ -31,7 +31,7 @@ def get_project_stats(db: Session, project_id: int):
     total_count = (
         db.query(func.count(Task.id))
         .filter(Task.project_id == project_id)
-        .scalar()
+        .scalar() #scalar() returns a single value (the count) instead of a list of rows
     )
 
     # COUNT grouped by priority for this project — e.g.
@@ -46,5 +46,5 @@ def get_project_stats(db: Session, project_id: int):
     return {
         "project_id": project_id,
         "total_tasks": total_count,
-        "by_priority": {priority: count for priority, count in by_priority},
+        "by_priority": {priority: count for priority, count in by_priority}, #Convert list of tuples to dictionary example: [("high", 3), ("medium", 5), ("low", 2)] -> {"high": 3, "medium": 5, "low": 2}
     }
