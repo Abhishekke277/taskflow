@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query #Query is used to define query parameters for the endpoint
 from sqlalchemy.orm import Session
 from backend.database import get_db
 from backend.models.task import Task
@@ -43,7 +43,7 @@ def sort_tasks(sort: str = Query(default="priority"), db: Session = Depends(get_
     if sort == "priority":
         # Map priority string to a comparable numeric rank before sorting
         for task in task_dicts:
-            task["_priority_rank"] = PRIORITY_RANK.get(task["priority"], 0)
+            task["_priority_rank"] = PRIORITY_RANK.get(task["priority"], 0)#this line adds a temporary key "_priority_rank" to each task dictionary, which holds the numeric rank corresponding to the task's priority. This allows for easier comparison during sorting.
         insertion_sort(task_dicts, key="_priority_rank")
         # Remove the helper key before returning
         for task in task_dicts:

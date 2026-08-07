@@ -12,7 +12,7 @@ def create_task(db: Session, task: TaskCreate) -> Task:
     )
     db.add(db_task)
     db.commit()
-    db.refresh(db_task)
+    db.refresh(db_task) # Updating the object to retrieve the latest data from the database, including any auto-generated fields like the primary key (id).
     return db_task
 
 
@@ -33,7 +33,7 @@ def update_task(db: Session, task_id: int, task_update: TaskUpdate):
     # skips fields left as None/default in the request body)
     update_data = task_update.model_dump(exclude_unset=True)
     for field, value in update_data.items():
-        setattr(db_task, field, value)
+        setattr(db_task, field, value) #setattr is a built-in Python function that sets the value of an attribute of an object. In this case, it updates the fields of the db_task object with the new values provided in update_data.
 
     db.commit()
     db.refresh(db_task)

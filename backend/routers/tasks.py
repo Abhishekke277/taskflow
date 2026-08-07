@@ -6,6 +6,7 @@ from backend.schemas.task import TaskCreate, TaskUpdate, TaskResponse
 from backend.crud import task as task_crud
 from backend.algorithms.sorting import insertion_sort
 from backend.algorithms.searching import binary_search, linear_search
+import re
 
 router = APIRouter(prefix="/tasks", tags=["tasks"])
 
@@ -17,6 +18,30 @@ PRIORITY_RANK = {"low": 1, "medium": 2, "high": 3}
 def create_task(task: TaskCreate, db: Session = Depends(get_db)):
     return task_crud.create_task(db, task)
 
+
+def due_date_sort_key(due_date_value):
+    """
+    Converts a raw due_date text value into a comparable sort key.
+    Numeric day-phrases ("2 days", "10", ".5 day") sort by magnitude;
+    "today"/"tomorrow" sort first; other free-text phrases (like
+    "next friday") sort alphabetically after the numeric ones;
+    None (no due date) always sorts last.
+    """
+    if due_date_value is None:
+        return (2, 0)
+
+    text = due_date_value.strip().lower()
+
+    if text == "today":
+        return (0, 0)
+    if text == "tomorrow":
+        return (0, 1)
+
+    match = re.match(r"^\.?\d+(\.\d+)?", text)
+    if match:
+        return (0, float(match.group()))
+
+    return (1, text)
 
 @router.get("/", response_model=list[TaskResponse])
 def list_tasks(
@@ -63,12 +88,10 @@ def list_tasks(
         for t in task_dicts:
             del t["_priority_rank"]
     else:
-        # sort == "due_date" — None values need a comparable substitute,
-        # since insertion_sort can't compare str > NoneType. Tasks with
-        # no due date sort to the end (using "~", which is ASCII-higher
-        # than any typical lowercase letter or digit).
+        # sort == "due_date" — numeric-aware sort key (see due_date_sort_key)
+        # so "10 days" sorts after "2 days", not lexicographically before it
         for t in task_dicts:
-            t["_due_date_sort_key"] = t["due_date"] if t["due_date"] is not None else "~"
+            t["_due_date_sort_key"] = due_date_sort_key(t["due_date"])
         insertion_sort(task_dicts, key="_due_date_sort_key")
         for t in task_dicts:
             del t["_due_date_sort_key"]

@@ -32,7 +32,7 @@ def insertion_sort_count(records, key):
         current = records[i]
         j = i - 1
 
-        while j >= 0:
+        while j >= 0: # why we did't use and records[j][key] > current[key] here because we want to count the comparison even if it fails
             comparison_count += 1  # counts the comparison in the while condition
             if records[j][key] > current[key]:
                 records[j + 1] = records[j]
