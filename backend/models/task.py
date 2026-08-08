@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, ForeignKey, CheckConstraint
+from sqlalchemy import Column, Integer, String, ForeignKey, CheckConstraint , Boolean
 from sqlalchemy.orm import relationship
 from backend.database import Base
 
@@ -17,6 +17,8 @@ class Task(Base):
     # Nullable, stored as raw text on purpose — holds either a
     # manually entered date OR a parsed phrase like "next friday"
     due_date = Column(String, nullable=True)
+
+    completed = Column(Boolean, nullable=False, default=False)
 
     # Foreign key referencing projects.id
     project_id = Column(Integer, ForeignKey("projects.id"), nullable=False)

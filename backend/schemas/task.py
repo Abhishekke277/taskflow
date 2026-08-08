@@ -25,6 +25,7 @@ class TaskUpdate(BaseModel):
     title: Optional[str] = None
     priority: Optional[str] = Field(default=None, pattern="^(low|medium|high)$")
     due_date: Optional[str] = None
+    completed: Optional[bool] = None   # ← ye add karein
 
     @field_validator("title")
     @classmethod
@@ -42,6 +43,7 @@ class TaskResponse(BaseModel):
     title: str
     priority: str
     due_date: Optional[str] = None
+    completed: bool = False   # ← for complte tasks
     project_id: int
 
     class Config:
