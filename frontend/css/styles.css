@@ -186,6 +186,10 @@ body {
   padding: 16px;
 }
 
+#project-form-section {
+  flex: 1 1 220px;
+}
+
 .setup-form h3 {
   font-family: var(--font-mono);
   font-size: 0.8rem;
@@ -690,4 +694,274 @@ body {
   .flat-task-card { flex-direction: column; align-items: flex-start; gap: 12px; }
   .flat-task-actions { width: 100%; }
   .flat-task-actions button { flex: 1; }
+}
+
+/* ───────────────────────────────
+   Auth screen (Sign In / Register)
+─────────────────────────────── */
+.auth-screen {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: var(--bg);
+  padding: 20px;
+}
+
+.auth-screen[hidden] {
+  display: none;
+}
+
+.auth-card {
+  background-color: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 32px;
+  width: 100%;
+  max-width: 380px;
+}
+
+.auth-brand {
+  text-align: center;
+  margin-bottom: 24px;
+}
+
+.auth-thunder {
+  font-size: 2rem;
+  display: block;
+  margin-bottom: 8px;
+}
+
+.auth-brand h1 {
+  font-family: var(--font-mono);
+  font-size: 1.5rem;
+  color: var(--text);
+  letter-spacing: 0.04em;
+}
+
+.auth-brand p {
+  color: var(--muted);
+  font-size: 0.85rem;
+  margin-top: 4px;
+}
+
+.auth-tabs {
+  display: flex;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 20px;
+}
+
+.auth-tab {
+  flex: 1;
+  background: transparent;
+  border: none;
+  color: var(--muted);
+  padding: 10px 0;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  transition: color 0.15s ease, border-color 0.15s ease;
+}
+
+.auth-tab.active {
+  color: var(--accent);
+  border-bottom-color: var(--accent);
+}
+
+.auth-form .form-group {
+  margin-bottom: 16px;
+}
+
+.password-field {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.password-field input {
+  width: 100%;
+  padding-right: 40px;
+}
+
+/* SVG-based eye toggle */
+
+.eye-toggle {
+  position: absolute;
+  right: 10px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  color: var(--muted);
+  transition: color 0.15s ease;
+}
+
+.eye-toggle:hover {
+  color: var(--accent);
+}
+
+.eye-toggle svg {
+  width: 18px;
+  height: 18px;
+  stroke: currentColor;
+}
+
+.eye-toggle .icon-closed {
+  display: none;
+}
+
+.eye-toggle.showing .icon-open {
+  display: none;
+}
+
+.eye-toggle.showing .icon-closed {
+  display: block;
+}
+
+
+.auth-submit-btn {
+  width: 100%;
+  margin-top: 4px;
+}
+
+/* Quick add form */
+
+.add-task-container {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+
+.quick-add-form-card textarea {
+  width: 100%;
+  background-color: var(--bg);
+  border: 1px solid var(--border);
+  color: var(--text);
+  padding: 9px 10px;
+  border-radius: var(--radius);
+  font-family: var(--font-body);
+  font-size: 0.9rem;
+  resize: vertical;
+}
+
+.quick-add-form-card textarea:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+@media (max-width: 768px) {
+  .add-task-container {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Profile Popup */
+
+.profile-wrapper {
+  position: relative;
+}
+
+.profile-btn {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  border: 1px solid var(--border);
+  background-color: var(--surface-raised);
+  color: var(--text);
+  font-size: 1.1rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.profile-btn:hover {
+  border-color: var(--accent);
+}
+
+.profile-popup {
+  position: absolute;
+  top: 46px;
+  right: 0;
+  background-color: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 20px;
+  width: 220px;
+  z-index: 30;
+  text-align: center;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+.profile-popup-close {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  background: transparent;
+  border: none;
+  color: var(--muted);
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+
+.profile-popup-close:hover {
+  color: var(--high);
+}
+
+.profile-popup-avatar {
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  background-color: var(--accent);
+  color: #0F1419;
+  font-size: 1.4rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 10px;
+}
+
+.profile-popup-name {
+  font-weight: 600;
+  color: var(--text);
+  font-size: 0.95rem;
+}
+
+.profile-popup-email {
+  color: var(--muted);
+  font-size: 0.8rem;
+  margin-top: 2px;
+}
+
+.logout-btn {
+  background-color: var(--high);
+  color: #ffffff;
+  border: none;
+  padding: 9px 16px;
+  border-radius: var(--radius);
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+
+.logout-btn:hover {
+  opacity: 0.85;
+}
+
+/* Hide browser's built-in password-reveal and autofill icons,
+   so they don't overlap with our custom eye-toggle button */
+input::-ms-reveal,
+input::-ms-clear {
+  display: none;
+}
+
+input::-webkit-contacts-auto-fill-button,
+input::-webkit-credentials-auto-fill-button {
+  visibility: hidden;
+  display: none !important;
+  pointer-events: none;
+  position: absolute;
+  right: 0;
 }

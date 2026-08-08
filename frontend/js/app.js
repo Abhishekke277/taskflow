@@ -1,3 +1,135 @@
+// ── AUTH LOGIC ──
+const authScreen = document.getElementById("auth-screen");
+const appContent = document.getElementById("app-content");
+
+const tabSignin = document.getElementById("tab-signin");
+const tabRegister = document.getElementById("tab-register");
+const signinForm = document.getElementById("signin-form");
+const registerForm = document.getElementById("register-form");
+const signinMsg = document.getElementById("signin-msg");
+const registerMsg = document.getElementById("register-msg");
+
+tabSignin.addEventListener("click", () => {
+  tabSignin.classList.add("active");
+  tabRegister.classList.remove("active");
+  signinForm.hidden = false;
+  registerForm.hidden = true;
+});
+
+tabRegister.addEventListener("click", () => {
+  tabRegister.classList.add("active");
+  tabSignin.classList.remove("active");
+  registerForm.hidden = false;
+  signinForm.hidden = true;
+});
+
+document.querySelectorAll(".eye-toggle").forEach((btn) => {
+  btn.addEventListener("click", () => {
+    const targetInput = document.getElementById(btn.dataset.target);
+    const isHidden = targetInput.type === "password";
+    targetInput.type = isHidden ? "text" : "password";
+    btn.classList.toggle("showing", isHidden);
+  });
+});
+
+function showAuthMessage(el, text, type) {
+  el.textContent = text;
+  el.className = `form-feedback-msg ${type}`;
+  setTimeout(() => {
+    el.textContent = "";
+    el.className = "form-feedback-msg";
+  }, 3000);
+}
+
+function loginSuccess(data) {
+  localStorage.setItem("taskflow_token", data.access_token);
+  localStorage.setItem("taskflow_user_name", data.name);
+  localStorage.setItem("taskflow_user_email", data.email);
+
+  authScreen.hidden = true;
+  appContent.hidden = false;
+
+  updateProfileDisplay();
+  loadTasks();
+  loadProjectsIntoDropdown();
+}
+
+signinForm.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  const email = document.getElementById("signin-email").value.trim();
+  const password = document.getElementById("signin-password").value;
+
+  if (!email || !password) {
+    showAuthMessage(signinMsg, "Email and password are required.", "error");
+    return;
+  }
+
+  try {
+    const response = await fetch(`${API_BASE_URL}/auth/login`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email, password }),
+    });
+
+    if (!response.ok) {
+      showAuthMessage(signinMsg, "Incorrect email or password.", "error");
+      return;
+    }
+
+    
+    const data = await response.json();
+    signinForm.reset();
+    showAuthMessage(signinMsg, "Signed in!", "success");
+    loginSuccess(data);
+  } catch (err) {
+    console.error("Login failed:", err);
+    showAuthMessage(signinMsg, "Network error — check console.", "error");
+  }
+});
+
+registerForm.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  const name = document.getElementById("register-name").value.trim();
+  const email = document.getElementById("register-email").value.trim();
+  const password = document.getElementById("register-password").value;
+
+  if (!name || !email || !password) {
+    showAuthMessage(registerMsg, "All fields are required.", "error");
+    return;
+  }
+
+  try {
+    const response = await fetch(`${API_BASE_URL}/auth/register`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name, email, password }),
+    });
+
+    if (!response.ok) {
+      const errorBody = await response.json().catch(() => ({}));
+      showAuthMessage(registerMsg, errorBody.detail || "Registration failed.", "error");
+      return;
+    }
+
+    const data = await response.json();
+    registerForm.reset();
+    showAuthMessage(registerMsg, "Account created!", "success");
+    loginSuccess(data);
+  } catch (err) {
+    console.error("Registration failed:", err);
+    showAuthMessage(registerMsg, "Network error — check console.", "error");
+  }
+});
+
+const existingToken = localStorage.getItem("taskflow_token");
+if (existingToken) {
+  authScreen.hidden = true;
+  appContent.hidden = false;
+} else {
+  authScreen.hidden = false;
+  appContent.hidden = true;
+}
+
 // ── Theme toggle ──
 const themeToggleBtn = document.getElementById("theme-toggle-btn");
 let isLightMode = localStorage.getItem("taskflow_theme") === "light";
@@ -20,11 +152,55 @@ themeToggleBtn.addEventListener("click", () => {
   }
 });
 
-// ── Element references ──
-const setupToggleBtn = document.getElementById("setup-toggle-btn");
-const setupPanel = document.getElementById("setup-panel");
+// ── Profile popup + Logout ──
+const profileBtn = document.getElementById("profile-btn");
+const profilePopup = document.getElementById("profile-popup");
+const profilePopupClose = document.getElementById("profile-popup-close");
+const profileNameEl = document.getElementById("profile-name");
+const profileEmailEl = document.getElementById("profile-email");
+const logoutBtn = document.getElementById("logout-btn");
 
-const quickAddToggle = document.getElementById("quick-add-toggle");
+function updateProfileDisplay() {
+  profileNameEl.textContent = localStorage.getItem("taskflow_user_name") || "";
+  profileEmailEl.textContent = localStorage.getItem("taskflow_user_email") || "";
+}
+
+profileBtn.addEventListener("click", () => {
+  profilePopup.hidden = !profilePopup.hidden;
+});
+
+profilePopupClose.addEventListener("click", () => {
+  profilePopup.hidden = true;
+});
+
+logoutBtn.addEventListener("click", () => {
+  localStorage.removeItem("taskflow_token");
+  localStorage.removeItem("taskflow_user_name");
+  localStorage.removeItem("taskflow_user_email");
+
+  // Clear both forms so no leftover credentials are visible to
+  // the next person who opens the sign-in screen
+  signinForm.reset();
+  registerForm.reset();
+
+  profilePopup.hidden = true;
+  appContent.hidden = true;
+  authScreen.hidden = false;
+
+  // Always land back on the Sign In tab, not wherever the user last was
+  tabSignin.classList.add("active");
+  tabRegister.classList.remove("active");
+  signinForm.hidden = false;
+  registerForm.hidden = true;
+});
+
+
+if (existingToken) {
+  updateProfileDisplay();
+}
+
+// ── Element references ──
+const quickAddToggle = null; // no longer used — both forms always visible
 const addTaskForm = document.getElementById("add-task-form");
 const titleInput = document.getElementById("task-title");
 const dueDateInput = document.getElementById("task-due-date");
@@ -32,16 +208,15 @@ const priorityInput = document.getElementById("task-priority");
 const projectIdInput = document.getElementById("task-project-id");
 const taskFormMsg = document.getElementById("task-form-msg");
 
-const addUserForm = document.getElementById("add-user-form");
-const userNameInput = document.getElementById("user-name");
-const userEmailInput = document.getElementById("user-email");
-const userFormMsg = document.getElementById("user-form-msg");
-
 const addProjectForm = document.getElementById("add-project-form");
 const projectNameInput = document.getElementById("project-name");
-const projectOwnerIdInput = document.getElementById("project-owner-id");
 const projectFormMsg = document.getElementById("project-form-msg");
 const taskProjectSelect = document.getElementById("task-project-id");
+
+const quickAddForm = document.getElementById("quick-add-form");
+const quickAddDescription = document.getElementById("quick-add-description");
+const quickAddProjectSelect = document.getElementById("quick-add-project-id");
+const quickAddMsg = document.getElementById("quick-add-msg");
 
 const searchInput = document.getElementById("search-input");
 const searchBtn = document.getElementById("search-btn");
@@ -67,30 +242,11 @@ const laneCounts = {
 
 let currentTasks = [];
 let activeAlgo = "binary";
-
-// Two independent states matching requested behavior:
-// viewMode: "list" (default) or "lanes" (when "priority" is clicked)
-// sortBy:   "none" (default) or "due_date" (when "due date" is clicked)
 let viewMode = "list";
 let sortBy = "none";
-let searchedTask = null; // Single task search isolate variable
+let searchedTask = null;
 
-// ── Collapsible setup panel ──
-setupToggleBtn.addEventListener("click", () => {
-  const isExpanded = setupToggleBtn.getAttribute("aria-expanded") === "true";
-  setupToggleBtn.setAttribute("aria-expanded", String(!isExpanded));
-  setupPanel.hidden = isExpanded;
-});
-
-// ── Quick-add toggle ──
-quickAddToggle.addEventListener("click", () => {
-  const isHidden = addTaskForm.hidden;
-  addTaskForm.hidden = !isHidden;
-  quickAddToggle.textContent = isHidden ? "− Cancel" : "+ New Task";
-  if (isHidden) titleInput.focus();
-});
-
-// ── Build a flat-list card (Image 1 style — shows priority badge) ──
+// ── Task card builders ──
 function buildListCard(task) {
   const card = document.createElement("div");
   card.className = "flat-task-card";
@@ -145,7 +301,6 @@ function buildListCard(task) {
   return card;
 }
 
-// ── Build a lane card (Image 2 style — no priority badge, column shows it) ──
 function buildLaneCard(task) {
   const card = document.createElement("div");
   card.className = "task-card";
@@ -192,7 +347,6 @@ function buildLaneCard(task) {
   return card;
 }
 
-// ── Renders whichever view is currently active, using currentTasks ──
 function renderCurrentView() {
   if (searchedTask !== null) {
     boardEl.hidden = true;
@@ -254,16 +408,13 @@ function renderLaneBoard(tasks) {
   });
 }
 
-// ── Load tasks: cache first, then live backend, honoring sortBy ──
 async function loadTasks() {
   currentTasks = loadTasksFromCache();
   renderCurrentView();
 
   try {
     const freshTasks =
-      sortBy === "due_date"
-        ? await fetchSortedTasks("due_date")
-        : await fetchTasks();
+      sortBy === "due_date" ? await fetchSortedTasks("due_date") : await fetchTasks();
     currentTasks = freshTasks;
     renderCurrentView();
     saveTasksToCache(freshTasks);
@@ -272,7 +423,6 @@ async function loadTasks() {
   }
 }
 
-// ── Sort / view control buttons ──
 sortButtons.forEach((btn) => {
   btn.addEventListener("click", async () => {
     const action = btn.dataset.action || btn.dataset.sort;
@@ -285,12 +435,12 @@ sortButtons.forEach((btn) => {
     } else if (action === "priority") {
       viewMode = "lanes";
       btn.classList.add("active");
-      const unsortedBtn = document.querySelector('[data-action="unsorted"], [data-sort="unsorted"]');
+      const unsortedBtn = document.querySelector('[data-sort="unsorted"]');
       if (unsortedBtn) unsortedBtn.classList.remove("active");
     } else if (action === "due_date") {
       sortBy = "due_date";
       btn.classList.add("active");
-      const unsortedBtn = document.querySelector('[data-action="unsorted"], [data-sort="unsorted"]');
+      const unsortedBtn = document.querySelector('[data-sort="unsorted"]');
       if (unsortedBtn) unsortedBtn.classList.remove("active");
     }
 
@@ -298,7 +448,6 @@ sortButtons.forEach((btn) => {
   });
 });
 
-// ── Search control with red/green feedback & 3s timeout ──
 algoButtons.forEach((btn) => {
   btn.addEventListener("click", () => {
     algoButtons.forEach((b) => b.classList.remove("active"));
@@ -307,15 +456,13 @@ algoButtons.forEach((btn) => {
   });
 });
 
-// Helper function to display search feedback messages with 3s auto-clear timeout
 const showTemporarySearchMessage = (text, type) => {
   searchResultMsg.textContent = text;
   searchResultMsg.className = `search-result-msg ${type}`;
-
   setTimeout(() => {
     searchResultMsg.textContent = "";
     searchResultMsg.className = "search-result-msg";
-  }, 3000); // 3 seconds timeout
+  }, 3000);
 };
 
 searchBtn.addEventListener("click", async () => {
@@ -369,10 +516,10 @@ clearSearchBtn.addEventListener("click", () => {
   renderCurrentView();
 });
 
-// ── Project dropdown ──
+// ── Project dropdown (fills both manual-add and quick-add selects) ──
 async function loadProjectsIntoDropdown() {
   try {
-    const response = await fetch(`${API_BASE_URL}/projects/`);
+    const response = await fetch(`${API_BASE_URL}/projects/`, { headers: authHeaders() });
     if (!response.ok) throw new Error("Failed to fetch projects");
     const projects = await response.json();
 
@@ -382,99 +529,55 @@ async function loadProjectsIntoDropdown() {
     placeholderOption.textContent = "Select...";
     taskProjectSelect.appendChild(placeholderOption);
 
+    quickAddProjectSelect.textContent = "";
+    const qaPlaceholder = document.createElement("option");
+    qaPlaceholder.value = "";
+    qaPlaceholder.textContent = "Select...";
+    quickAddProjectSelect.appendChild(qaPlaceholder);
+
     projects.forEach((project) => {
-      const option = document.createElement("option");
-      option.value = project.id;
-      option.textContent = `${project.name} (#${project.id})`;
-      taskProjectSelect.appendChild(option);
+      const option1 = document.createElement("option");
+      option1.value = project.id;
+      option1.textContent = `${project.name} (#${project.id})`;
+      taskProjectSelect.appendChild(option1);
+
+      const option2 = document.createElement("option");
+      option2.value = project.id;
+      option2.textContent = `${project.name} (#${project.id})`;
+      quickAddProjectSelect.appendChild(option2);
     });
   } catch (err) {
     console.error("Could not load projects:", err);
   }
 }
 
-// ── Create user with green/red messaging (with 3s auto-clear timeout) ──
-addUserForm.addEventListener("submit", async (event) => {
-  event.preventDefault();
-  userFormMsg.textContent = "";
-  userFormMsg.className = "form-feedback-msg";
-
-  const name = userNameInput.value.trim();
-  const email = userEmailInput.value.trim();
-
-  // Helper function to show message and set 3 second timeout
-  const showTemporaryMessage = (text, type) => {
-    userFormMsg.textContent = text;
-    userFormMsg.className = `form-feedback-msg ${type}`;
-
-    setTimeout(() => {
-      userFormMsg.textContent = "";
-      userFormMsg.className = "form-feedback-msg";
-    }, 3000); // 3 seconds timeout
-  };
-
-  if (!name || !email) {
-    showTemporaryMessage("Both name and email fields are required.", "error");
-    return;
-  }
-
-  try {
-    const response = await fetch(`${API_BASE_URL}/users/`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name, email }),
-    });
-
-    if (response.ok || response.status === 201) {
-      let createdUser = {};
-      try { createdUser = await response.json(); } catch (e) {}
-
-      const userIdText = createdUser.id ? ` (User ID: ${createdUser.id})` : "";
-      showTemporaryMessage(`User created successfully!${userIdText}`, "success");
-      addUserForm.reset();
-    } else {
-      const errorBody = await response.json().catch(() => ({}));
-      const errorDetail = errorBody.detail || "Failed to create user. Email might already exist.";
-      const msgText = typeof errorDetail === "string" ? errorDetail : JSON.stringify(errorDetail);
-      showTemporaryMessage(msgText, "error");
-    }
-  } catch (err) {
-    console.error("Failed to create user:", err);
-    showTemporaryMessage("Network error while creating user.", "error");
-  }
-});
-
-
-// ── Create project with green/red messaging (with 3s auto-clear timeout) ──
+// ── Create project ──
 addProjectForm.addEventListener("submit", async (event) => {
   event.preventDefault();
   projectFormMsg.textContent = "";
   projectFormMsg.className = "form-feedback-msg";
 
   const name = projectNameInput.value.trim();
-  const ownerId = parseInt(projectOwnerIdInput.value, 10);
 
-  // Helper function to display message and automatically clear it after 3 seconds
   const showTemporaryMessage = (text, type) => {
     projectFormMsg.textContent = text;
     projectFormMsg.className = `form-feedback-msg ${type}`;
-
     setTimeout(() => {
       projectFormMsg.textContent = "";
       projectFormMsg.className = "form-feedback-msg";
-    }, 3000); // 3 seconds timeout
+    }, 3000);
   };
 
-  if (!name || !ownerId) {
-    showTemporaryMessage("All fields are required to create a project.", "error");
+  if (!name) {
+    showTemporaryMessage("Project name is required.", "error");
     return;
   }
 
   try {
     const response = await fetch(`${API_BASE_URL}/projects/`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name, owner_id: ownerId }),
+      headers: authHeaders(),
+      body: JSON.stringify({ name }),
     });
 
     if (response.ok || response.status === 201) {
@@ -482,7 +585,7 @@ addProjectForm.addEventListener("submit", async (event) => {
       addProjectForm.reset();
       await loadProjectsIntoDropdown();
     } else {
-      showTemporaryMessage("Failed to create project. Verify Owner User ID.", "error");
+      showTemporaryMessage("Failed to create project.", "error");
     }
   } catch (err) {
     console.error("Failed to create project:", err);
@@ -490,22 +593,19 @@ addProjectForm.addEventListener("submit", async (event) => {
   }
 });
 
-// ── Add task — with 3s auto-clear timeout for messages ──
+// ── Add task manually ──
 addTaskForm.addEventListener("submit", async (event) => {
   event.preventDefault();
   taskFormMsg.textContent = "";
   taskFormMsg.className = "form-feedback-msg full-width-msg";
 
-  // Helper function to display message and clear it after 3 seconds
-  const showTemporaryMessage = (text, type, onComplete = null) => {
+  const showTemporaryMessage = (text, type) => {
     taskFormMsg.textContent = text;
     taskFormMsg.className = `form-feedback-msg full-width-msg ${type}`;
-
     setTimeout(() => {
       taskFormMsg.textContent = "";
       taskFormMsg.className = "form-feedback-msg full-width-msg";
-      if (onComplete) onComplete();
-    }, 3000); // 3 seconds timeout
+    }, 3000);
   };
 
   const title = titleInput.value.trim();
@@ -532,11 +632,7 @@ addTaskForm.addEventListener("submit", async (event) => {
     await loadTasks();
     addTaskForm.reset();
     priorityInput.value = "medium";
-
-    showTemporaryMessage("Task added successfully!", "success", () => {
-      addTaskForm.hidden = true;
-      quickAddToggle.textContent = "+ New Task";
-    });
+    showTemporaryMessage("Task added successfully!", "success");
   } catch (err) {
     console.error("Failed to create task:", err);
     showTemporaryMessage("Failed to create task. Check the console.", "error");
@@ -545,6 +641,52 @@ addTaskForm.addEventListener("submit", async (event) => {
 
 titleInput.addEventListener("input", () => {
   if (titleInput.value.trim()) taskFormMsg.textContent = "";
+});
+
+// ── Quick-Add (AI) ──
+quickAddForm.addEventListener("submit", async (event) => {
+  event.preventDefault();
+
+  const description = quickAddDescription.value.trim();
+  const projectId = parseInt(quickAddProjectSelect.value, 10);
+
+  const showTemporaryMessage = (text, type) => {
+    quickAddMsg.textContent = text;
+    quickAddMsg.className = `form-feedback-msg ${type}`;
+    setTimeout(() => {
+      quickAddMsg.textContent = "";
+      quickAddMsg.className = "form-feedback-msg";
+    }, 3000);
+  };
+
+  if (!description) {
+    showTemporaryMessage("Please describe the task.", "error");
+    return;
+  }
+  if (!projectId) {
+    showTemporaryMessage("Please select a project.", "error");
+    return;
+  }
+
+  try {
+    const response = await fetch(`${API_BASE_URL}/tasks/quick-add`, {
+      method: "POST",
+      headers: authHeaders(),
+      body: JSON.stringify({ description, project_id: projectId }),
+    });
+
+    if (!response.ok) {
+      const errorBody = await response.json().catch(() => ({}));
+      throw new Error(errorBody.detail || "Failed to quick-add task");
+    }
+
+    await loadTasks();
+    quickAddForm.reset();
+    showTemporaryMessage("Task added via AI!", "success");
+  } catch (err) {
+    console.error("Quick-add failed:", err);
+    showTemporaryMessage("Failed to add task via AI.", "error");
+  }
 });
 
 // ── Edit / delete ──
@@ -581,5 +723,7 @@ async function handleDeleteTask(taskId) {
 }
 
 // ── Initial load ──
-loadTasks();
-loadProjectsIntoDropdown();
+if (existingToken) {
+  loadTasks();
+  loadProjectsIntoDropdown();
+}

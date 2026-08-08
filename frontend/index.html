@@ -10,99 +10,170 @@
 </head>
 <body>
 
+  <!-- ── Auth screen: shown until login/register succeeds ── -->
+  <section id="auth-screen" class="auth-screen">
+    <div class="auth-card">
+      <div class="auth-brand">
+        <span class="auth-thunder">⚡</span>
+        <h1>TaskFlow</h1>
+        <p>AI-powered task management</p>
+      </div>
+
+      <div class="auth-tabs">
+        <button type="button" id="tab-signin" class="auth-tab active">Sign In</button>
+        <button type="button" id="tab-register" class="auth-tab">Register</button>
+      </div>
+
+      <!-- Sign In form -->
+      <form id="signin-form" class="auth-form" novalidate>
+        <div class="form-group">
+          <label for="signin-email">Email</label>
+          <input type="email" id="signin-email" placeholder="you@example.com" />
+        </div>
+        <div class="form-group">
+          <label for="signin-password">Password</label>
+          <div class="password-field">
+            <input type="password" id="signin-password" placeholder="••••••••" />
+            <button type="button" class="eye-toggle" data-target="signin-password">
+                <svg class="icon-open" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8Z"/><circle cx="12" cy="12" r="3"/></svg>
+                <svg class="icon-closed" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.94 10.94 0 0 1 12 20c-7 0-11-8-11-8a21.8 21.8 0 0 1 5.06-6.06M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a21.8 21.8 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+            </button>
+          </div>
+        </div>
+        <button type="submit" class="create_btn auth-submit-btn">Sign In</button>
+        <p id="signin-msg" class="form-feedback-msg"></p>
+      </form>
+
+      <!-- Register form -->
+      <form id="register-form" class="auth-form" novalidate hidden>
+        <div class="form-group">
+          <label for="register-name">Username</label>
+          <input type="text" id="register-name" placeholder="Priya Sharma" />
+        </div>
+        <div class="form-group">
+          <label for="register-email">Email</label>
+          <input type="email" id="register-email" placeholder="you@example.com" />
+        </div>
+        <div class="form-group">
+          <label for="register-password">Password</label>
+          <div class="password-field">
+            <input type="password" id="register-password" placeholder="••••••••" />
+            <button type="button" class="eye-toggle" data-target="register-password">
+              <svg class="icon-open" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8Z"/><circle cx="12" cy="12" r="3"/></svg>
+              <svg class="icon-closed" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.94 10.94 0 0 1 12 20c-7 0-11-8-11-8a21.8 21.8 0 0 1 5.06-6.06M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a21.8 21.8 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+            </button>
+          </div>
+        </div>
+        <button type="submit" class="create_btn auth-submit-btn">Create Account</button>
+        <p id="register-msg" class="form-feedback-msg"></p>
+      </form>
+    </div>
+  </section>
+
+  <!-- ── Main app: hidden until logged in ── -->
+  <div id="app-content" hidden>
+
   <!-- ── Header / control bar ── -->
   <header class="app-header">
     <div class="brand">
       <span class="brand-mark">TASKFLOW</span>
       <span class="brand-sub">DARK STORE OPS · CONTROL PANEL</span>
     </div>
-    
-    <div class="header-actions">
-      <!-- Dark / Light Theme Toggle -->
+
+   <div class="header-actions">
       <button id="theme-toggle-btn" class="theme-toggle-btn" aria-label="Toggle Theme">
         <span id="theme-icon">🌙</span> <span id="theme-text">Dark</span>
       </button>
 
-      <button id="setup-toggle-btn" class="setup-toggle-btn" aria-expanded="false" aria-controls="setup-panel">
-        <span class="setup-icon">⚙</span> Setup
-        <span class="chevron">▾</span>
-      </button>
-    </div>
+      <div class="profile-wrapper">
+        <button id="profile-btn" class="profile-btn" aria-label="Profile" type="button">👤</button>
+
+        <div id="profile-popup" class="profile-popup" hidden>
+          <button id="profile-popup-close" class="profile-popup-close" type="button">✕</button>
+          <div class="profile-popup-avatar">👤</div>
+          <p id="profile-name" class="profile-popup-name"></p>
+          <p id="profile-email" class="profile-popup-email"></p>
+        </div>
+      </div>
+
+      <button id="logout-btn" class="logout-btn" type="button">Logout</button>
+    </div>    
   </header>
 
-  <!-- ── Collapsible setup panel ── -->
-  <section id="setup-panel" class="setup-panel" hidden>
-    <div class="setup-grid">
+  <main class="app-main">
 
-      <form id="add-user-form" class="setup-form" novalidate>
-        <h3>Create User</h3>
-        <div class="form-group">
-          <label for="user-name">Name</label>
-          <input type="text" id="user-name" name="name" placeholder="e.g. Priya Sharma" />
-        </div>
-        <div class="form-group">
-          <label for="user-email">Email</label>
-          <input type="email" id="user-email" name="email" placeholder="priya@blinkit.com" />
-        </div>
-        <button type="submit" class="create_btn">Create User</button>
-        <p id="user-form-msg" class="form-feedback-msg"></p>
-      </form>
-
-      <form id="add-project-form" class="setup-form" novalidate>
-        <h3>Create Project</h3>
+    <!-- ── Create Project (visible right after login) ── -->
+    <section class="setup-form" id="project-form-section">
+      <h3>Create Project</h3>
+      <form id="add-project-form" novalidate>
         <div class="form-group">
           <label for="project-name">Project Name</label>
           <input type="text" id="project-name" name="name" placeholder="e.g. Dark Store Ops" />
         </div>
-        <div class="form-group">
-          <label for="project-owner-id">Owner User ID</label>
-          <input type="number" id="project-owner-id" name="owner_id" placeholder="e.g. 1" />
-        </div>
         <button type="submit" class="create_btn">Create Project</button>
         <p id="project-form-msg" class="form-feedback-msg"></p>
       </form>
+    </section>
 
-    </div>
-  </section>
+    <!-- ── Add Task: Manual form + AI Quick-Add form, side by side ── -->
+    <section class="add-task-container">
 
-  <main class="app-main">
+      <!-- Quick-Add (AI) -->
+      <div class="setup-form quick-add-form-card">
+        <h3>⚡ Quick Add (AI)</h3>
+        <form id="quick-add-form" novalidate>
+          <div class="form-group">
+            <label for="quick-add-description">Describe the task</label>
+            <textarea id="quick-add-description" rows="3" placeholder="e.g. Restock shelves urgent next friday"></textarea>
+          </div>
+          <div class="form-group">
+            <label for="quick-add-project-id">Project</label>
+            <select id="quick-add-project-id" name="project_id">
+              <option value="">Select...</option>
+            </select>
+          </div>
+          <button type="submit" class="create_btn">Add with AI</button>
+          <p id="quick-add-msg" class="form-feedback-msg"></p>
+        </form>
+      </div>
 
-    <!-- ── Quick add-task bar ── -->
-    <section class="quick-add-section">
-      <button type="button" id="quick-add-toggle" class="quick-add-toggle">+ New Task</button>
+      <!-- Manual Add -->
+      <div class="setup-form manual-add-form-card">
+        <h3>Add Task Manually</h3>
+        <form id="add-task-form" class="add-task-form" novalidate>
+          <div class="form-group grow">
+            <label for="task-title">Title</label>
+            <input type="text" id="task-title" name="title" placeholder="e.g. Restock shelves" />
+          </div>
 
-      <form id="add-task-form" class="add-task-form" novalidate hidden>
-        <div class="form-group grow">
-          <label for="task-title">Title</label>
-          <input type="text" id="task-title" name="title" placeholder="e.g. Restock shelves" />
-        </div>
+          <div class="form-group">
+            <label for="task-due-date">Due</label>
+            <input type="text" id="task-due-date" name="due_date" placeholder="1 days / tomorrow" />
+          </div>
 
-        <div class="form-group">
-          <label for="task-due-date">Due</label>
-          <input type="text" id="task-due-date" name="due_date" placeholder="1 days / tomorrow" />
-        </div>
+          <div class="form-group">
+            <label for="task-priority">Priority</label>
+            <select id="task-priority" name="priority">
+              <option value="low">Low</option>
+              <option value="medium" selected>Medium</option>
+              <option value="high">High</option>
+            </select>
+          </div>
 
-        <div class="form-group">
-          <label for="task-priority">Priority</label>
-          <select id="task-priority" name="priority">
-            <option value="low">Low</option>
-            <option value="medium" selected>Medium</option>
-            <option value="high">High</option>
-          </select>
-        </div>
+          <div class="form-group">
+            <label for="task-project-id">Project</label>
+            <select id="task-project-id" name="project_id">
+              <option value="">Select...</option>
+            </select>
+          </div>
 
-        <div class="form-group">
-          <label for="task-project-id">Project</label>
-          <select id="task-project-id" name="project_id">
-            <option value="">Select...</option>
-          </select>
-        </div>
+          <div class="form-group button-group">
+            <button type="submit" class="create_btn">Add Task</button>
+          </div>
+          <p id="task-form-msg" class="form-feedback-msg full-width-msg"></p>
+        </form>
+      </div>
 
-        <div class="form-group button-group">
-          <button type="submit" class="create_btn">Add Task</button>
-        </div>
-        <p id="task-form-msg" class="form-feedback-msg full-width-msg"></p>
-      </form>
     </section>
 
     <!-- ── Command bar ── -->
@@ -112,11 +183,11 @@
       <div class="command-line">
         <span class="prompt">&gt;</span>
 
-        <input 
-          type="text" 
-          id="search-input" 
-          placeholder="search exact task title..." 
-          autocomplete="off" 
+        <input
+          type="text"
+          id="search-input"
+          placeholder="search exact task title..."
+          autocomplete="off"
         />
 
         <div class="algo-toggle" role="group" aria-label="Search Algorithm">
@@ -147,7 +218,7 @@
 
     </section>
 
-    <!-- ── Default & Due Date Flat List View (Image 1 Style) ── -->
+    <!-- ── Default & Due Date Flat List View ── -->
     <section class="sorted-list-section" id="sorted-list-section">
       <div class="sorted-list-header">
         <span class="sorted-list-label" id="list-view-label">TASKS</span>
@@ -155,7 +226,7 @@
       <div class="sorted-list-body" id="sorted-list-body"></div>
     </section>
 
-    <!-- ── Priority Board (Image 2 Style - 3 Lanes) ── -->
+    <!-- ── Priority Board (3 Lanes) ── -->
     <section class="board" id="priority-board" hidden>
 
       <div class="lane" data-priority="high">
@@ -185,6 +256,8 @@
     </section>
 
   </main>
+  </div>
+  <!-- closes #app-content -->
 
   <script src="js/api.js"></script>
   <script src="js/cache.js"></script>
