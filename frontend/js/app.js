@@ -256,7 +256,7 @@ function buildListCard(task) {
   info.className = "flat-task-info";
 
   const titleEl = document.createElement("div");
-  titleEl.className = "flat-task-title";
+  titleEl.className = task.completed ? "flat-task-title completed" : "flat-task-title";
   titleEl.textContent = task.title;
 
   const meta = document.createElement("div");
@@ -287,12 +287,19 @@ function buildListCard(task) {
   editBtn.className = "flat-edit-btn";
   editBtn.addEventListener("click", () => handleEditTask(task));
 
+  const toggleBtn = document.createElement("button");
+  toggleBtn.textContent = task.completed ? "↺ Undo" : "✓ Complete";
+  toggleBtn.className = "flat-toggle-btn";
+  toggleBtn.addEventListener("click", () => handleToggleComplete(task));
+
+
   const deleteBtn = document.createElement("button");
   deleteBtn.textContent = "Delete";
   deleteBtn.className = "flat-delete-btn";
   deleteBtn.addEventListener("click", () => handleDeleteTask(task.id));
 
   actions.appendChild(editBtn);
+  actions.appendChild(toggleBtn);
   actions.appendChild(deleteBtn);
 
   card.appendChild(info);
@@ -310,7 +317,7 @@ function buildLaneCard(task) {
   top.className = "task-card-top";
 
   const titleEl = document.createElement("span");
-  titleEl.className = "task-title";
+  titleEl.className = task.completed ? "flat-task-title completed" : "flat-task-title";
   titleEl.textContent = task.title;
 
   const idEl = document.createElement("span");
@@ -332,12 +339,19 @@ function buildLaneCard(task) {
   editBtn.className = "edit-btn";
   editBtn.addEventListener("click", () => handleEditTask(task));
 
+  const toggleBtn = document.createElement("button");
+  toggleBtn.textContent = task.completed ? "↺ Undo" : "✓ Complete";
+  toggleBtn.className = "toggle-btn";
+  toggleBtn.addEventListener("click", () => handleToggleComplete(task));
+  actions.appendChild(toggleBtn);
+
   const deleteBtn = document.createElement("button");
   deleteBtn.textContent = "delete";
   deleteBtn.className = "delete-btn";
   deleteBtn.addEventListener("click", () => handleDeleteTask(task.id));
 
   actions.appendChild(editBtn);
+  actions.appendChild(toggleBtn);
   actions.appendChild(deleteBtn);
 
   card.appendChild(top);
@@ -706,6 +720,16 @@ async function handleEditTask(task) {
   } catch (err) {
     console.error("Failed to update task:", err);
     alert("Failed to update task.");
+  }
+}
+
+async function handleToggleComplete(task) {
+  try {
+    await updateTaskAPI(task.id, { completed: !task.completed });
+    await loadTasks();
+  } catch (err) {
+    console.error("Failed to toggle task completion:", err);
+    alert("Failed to update task status.");
   }
 }
 

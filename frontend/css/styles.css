@@ -672,6 +672,11 @@ body {
   transition: border-color 0.15s ease, color 0.15s ease;
 }
 
+.task-actions .toggle-btn:hover {
+  border-color: var(--low);
+  color: var(--low);
+}
+
 .edit-btn:hover { border-color: var(--accent); color: var(--accent); }
 .delete-btn:hover { border-color: var(--high); color: var(--high); }
 
@@ -964,4 +969,28 @@ input::-webkit-credentials-auto-fill-button {
   pointer-events: none;
   position: absolute;
   right: 0;
+}
+
+/* Task Completion Styles */
+
+.flat-task-title.completed,
+.task-title.completed {
+  text-decoration: line-through;
+  color: var(--muted);
+}
+
+.flat-toggle-btn {
+  padding: 6px 16px;
+  border-radius: 4px;
+  font-size: 0.82rem;
+  font-weight: 500;
+  cursor: pointer;
+  border: none;
+  color: #ffffff;
+  background-color: var(--low);
+  transition: opacity 0.15s ease;
+}
+
+.flat-toggle-btn:hover {
+  opacity: 0.85;
 }
