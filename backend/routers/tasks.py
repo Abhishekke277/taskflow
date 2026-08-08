@@ -9,7 +9,7 @@ from backend.algorithms.sorting import insertion_sort
 from backend.algorithms.searching import binary_search, linear_search
 from backend.models.user import User
 from backend.auth.dependencies import get_current_user
-import re
+import re  # re mean  i have added it for due_date_sort_key function which is used to sort the tasks based on due date.
 
 router = APIRouter(prefix="/tasks", tags=["tasks"])
 
@@ -65,8 +65,17 @@ def list_tasks(
     if sort is None:
         return tasks
 
+    # Bug fix: "completed" was missing from this dict, so it always
+    # reset to False in the response after sorting — now included.
     task_dicts = [
-        {"id": t.id, "title": t.title, "priority": t.priority, "due_date": t.due_date, "project_id": t.project_id}
+        {
+            "id": t.id,
+            "title": t.title,
+            "priority": t.priority,
+            "due_date": t.due_date,
+            "project_id": t.project_id,
+            "completed": t.completed,
+        }
         for t in tasks
     ]
 
@@ -76,15 +85,28 @@ def list_tasks(
         insertion_sort(task_dicts, key="_priority_rank")
         for t in task_dicts:
             del t["_priority_rank"]
-    else:
-        for t in task_dicts:
-            t["_due_date_sort_key"] = due_date_sort_key(t["due_date"])
-        insertion_sort(task_dicts, key="_due_date_sort_key")
-        for t in task_dicts:
-            del t["_due_date_sort_key"]
+        return task_dicts
 
-    return task_dicts
+    # sort == "due_date"
+    # Split into incomplete and completed groups first, so completed
+    # tasks always sink to the bottom regardless of their due date.
+    # Each group is sorted independently by due date, then concatenated.
+    incomplete_tasks = [t for t in task_dicts if not t["completed"]]
+    completed_tasks = [t for t in task_dicts if t["completed"]]
 
+    for t in incomplete_tasks:
+        t["_due_date_sort_key"] = due_date_sort_key(t["due_date"])
+    insertion_sort(incomplete_tasks, key="_due_date_sort_key")
+    for t in incomplete_tasks:
+        del t["_due_date_sort_key"]
+
+    for t in completed_tasks:
+        t["_due_date_sort_key"] = due_date_sort_key(t["due_date"])
+    insertion_sort(completed_tasks, key="_due_date_sort_key")
+    for t in completed_tasks:
+        del t["_due_date_sort_key"]
+
+    return incomplete_tasks + completed_tasks
 
 @router.get("/search")
 def search_tasks(
@@ -112,10 +134,13 @@ def search_tasks(
     matched_task = task_crud.get_task_by_id_for_owner(db, matched_id, current_user.id)
 
     return {
-        "id": matched_task.id, "title": matched_task.title, "priority": matched_task.priority,
-        "due_date": matched_task.due_date, "project_id": matched_task.project_id,
+        "id": matched_task.id,
+        "title": matched_task.title,
+        "priority": matched_task.priority,
+        "due_date": matched_task.due_date,
+        "project_id": matched_task.project_id,
+        "completed": matched_task.completed,
     }
-
 
 @router.get("/{task_id}", response_model=TaskResponse)
 def get_task(
