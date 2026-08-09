@@ -703,25 +703,68 @@ quickAddForm.addEventListener("submit", async (event) => {
   }
 });
 
-// ── Edit / delete ──
-async function handleEditTask(task) {
-  const newTitle = prompt("Edit task title:", task.title);
-  if (newTitle === null) return;
+// ── Edit / delete / toggle completion ──
+// ── Modal elements ──
+const modalOverlay = document.getElementById("modal-overlay");
+const editTaskModal = document.getElementById("edit-task-modal");
+const deleteConfirmModal = document.getElementById("delete-confirm-modal");
 
-  const trimmedTitle = newTitle.trim();
-  if (!trimmedTitle) {
-    alert("Title cannot be empty.");
+const editTaskForm = document.getElementById("edit-task-form");
+const editTaskTitleInput = document.getElementById("edit-task-title");
+const editTaskDueDateInput = document.getElementById("edit-task-due-date");
+const editTaskPriorityInput = document.getElementById("edit-task-priority");
+const editTaskMsg = document.getElementById("edit-task-msg");
+
+const deleteConfirmText = document.getElementById("delete-confirm-text");
+
+let taskBeingEdited = null;
+let taskIdBeingDeleted = null;
+
+function closeAllModals() {
+  modalOverlay.hidden = true;
+  editTaskModal.hidden = true;
+  deleteConfirmModal.hidden = true;
+}
+
+// ── Edit modal ──
+function handleEditTask(task) {
+  taskBeingEdited = task;
+  editTaskTitleInput.value = task.title;
+  editTaskDueDateInput.value = task.due_date || "";
+  editTaskPriorityInput.value = task.priority;
+
+  modalOverlay.hidden = false;
+  editTaskModal.hidden = false;
+  deleteConfirmModal.hidden = true;
+}
+
+document.getElementById("edit-modal-close").addEventListener("click", closeAllModals);
+document.getElementById("edit-modal-cancel").addEventListener("click", closeAllModals);
+
+editTaskForm.addEventListener("submit", async (event) => {
+  event.preventDefault();
+
+  const newTitle = editTaskTitleInput.value.trim();
+  if (!newTitle) {
+    editTaskMsg.textContent = "Title cannot be empty.";
+    editTaskMsg.className = "form-feedback-msg error";
     return;
   }
 
   try {
-    await updateTaskAPI(task.id, { title: trimmedTitle });
+    await updateTaskAPI(taskBeingEdited.id, {
+      title: newTitle,
+      due_date: editTaskDueDateInput.value.trim() || null,
+      priority: editTaskPriorityInput.value,
+    });
     await loadTasks();
+    closeAllModals();
   } catch (err) {
     console.error("Failed to update task:", err);
-    alert("Failed to update task.");
+    editTaskMsg.textContent = "Failed to update task.";
+    editTaskMsg.className = "form-feedback-msg error";
   }
-}
+});
 
 async function handleToggleComplete(task) {
   try {
@@ -733,18 +776,40 @@ async function handleToggleComplete(task) {
   }
 }
 
-async function handleDeleteTask(taskId) {
-  const confirmed = confirm("Delete this task?");
-  if (!confirmed) return;
 
+// ── Delete confirmation modal ──
+function handleDeleteTask(taskId) {
+  taskIdBeingDeleted = taskId;
+  deleteConfirmText.textContent = "This action cannot be undone. Are you sure you want to delete this task?";
+
+  modalOverlay.hidden = false;
+  deleteConfirmModal.hidden = false;
+  editTaskModal.hidden = true;
+}
+
+document.getElementById("delete-modal-close").addEventListener("click", closeAllModals);
+document.getElementById("delete-modal-cancel").addEventListener("click", closeAllModals);
+
+document.getElementById("delete-modal-confirm").addEventListener("click", async () => {
   try {
-    await deleteTaskAPI(taskId);
+    await deleteTaskAPI(taskIdBeingDeleted);
     await loadTasks();
+    closeAllModals();
   } catch (err) {
     console.error("Failed to delete task:", err);
     alert("Failed to delete task.");
   }
-}
+});
+
+
+
+// ── Close modal by clicking the dark overlay itself ──
+modalOverlay.addEventListener("click", (event) => {
+  if (event.target === modalOverlay) {
+    closeAllModals();
+  }
+});
+
 
 // ── Initial load ──
 if (existingToken) {

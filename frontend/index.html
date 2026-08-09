@@ -6,6 +6,7 @@
   <title>TaskFlow — Dark Store Ops</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
   <link rel="stylesheet" href="css/styles.css" />
 </head>
 <body>
@@ -14,29 +15,28 @@
   <section id="auth-screen" class="auth-screen">
     <div class="auth-card">
       <div class="auth-brand">
-        <span class="auth-thunder">⚡</span>
+      <span class="auth-thunder">⚡</span>   
         <h1>TaskFlow</h1>
         <p>AI-powered task management</p>
       </div>
 
       <div class="auth-tabs">
-        <button type="button" id="tab-signin" class="auth-tab active">Sign In</button>
-        <button type="button" id="tab-register" class="auth-tab">Register</button>
-      </div>
+        <button type="button" id="tab-signin" class="auth-tab active"><i class="fa-solid fa-right-to-bracket"></i> Sign In</button>
+        <button type="button" id="tab-register" class="auth-tab"><i class="fa-solid fa-user-plus"></i> Register</button>      </div>
 
       <!-- Sign In form -->
       <form id="signin-form" class="auth-form" novalidate>
         <div class="form-group">
-          <label for="signin-email">Email</label>
+          <label for="signin-email"><i class="fa-solid fa-envelope"></i> Email</label>
           <input type="email" id="signin-email" placeholder="you@example.com" />
         </div>
         <div class="form-group">
-          <label for="signin-password">Password</label>
+          <label for="signin-password"><i class="fa-solid fa-lock"></i> Password</label>
           <div class="password-field">
             <input type="password" id="signin-password" placeholder="••••••••" />
             <button type="button" class="eye-toggle" data-target="signin-password">
-                <svg class="icon-open" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8Z"/><circle cx="12" cy="12" r="3"/></svg>
-                <svg class="icon-closed" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.94 10.94 0 0 1 12 20c-7 0-11-8-11-8a21.8 21.8 0 0 1 5.06-6.06M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a21.8 21.8 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+                <i class="fa-solid fa-eye icon-open"></i>
+                <i class="fa-solid fa-eye-slash icon-closed"></i>
             </button>
           </div>
         </div>
@@ -47,20 +47,20 @@
       <!-- Register form -->
       <form id="register-form" class="auth-form" novalidate hidden>
         <div class="form-group">
-          <label for="register-name">Username</label>
+          <label for="register-name"><i class="fa-solid fa-user"></i> Username</label>
           <input type="text" id="register-name" placeholder="Priya Sharma" />
         </div>
         <div class="form-group">
-          <label for="register-email">Email</label>
+          <label for="register-email"><i class="fa-solid fa-envelope"></i> Email</label>
           <input type="email" id="register-email" placeholder="you@example.com" />
         </div>
         <div class="form-group">
-          <label for="register-password">Password</label>
+          <label for="register-password"><i class="fa-solid fa-lock"></i> Password</label>
           <div class="password-field">
             <input type="password" id="register-password" placeholder="••••••••" />
             <button type="button" class="eye-toggle" data-target="register-password">
-              <svg class="icon-open" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8Z"/><circle cx="12" cy="12" r="3"/></svg>
-              <svg class="icon-closed" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.94 10.94 0 0 1 12 20c-7 0-11-8-11-8a21.8 21.8 0 0 1 5.06-6.06M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a21.8 21.8 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+              <i class="fa-solid fa-eye icon-open"></i>
+              <i class="fa-solid fa-eye-slash icon-closed"></i>
             </button>
           </div>
         </div>
@@ -86,25 +86,25 @@
       </button>
 
       <div class="profile-wrapper">
-        <button id="profile-btn" class="profile-btn" aria-label="Profile" type="button">👤</button>
+        <button id="profile-btn" class="profile-btn" aria-label="Profile" type="button"><i class="fa-solid fa-user"></i></button>
 
         <div id="profile-popup" class="profile-popup" hidden>
-          <button id="profile-popup-close" class="profile-popup-close" type="button">✕</button>
-          <div class="profile-popup-avatar">👤</div>
+          <button id="profile-popup-close" class="profile-popup-close" type="button"><i class="fa-solid fa-xmark"></i></button>
+          <div class="profile-popup-avatar"><i class="fa-solid fa-user"></i></div>
           <p id="profile-name" class="profile-popup-name"></p>
           <p id="profile-email" class="profile-popup-email"></p>
         </div>
       </div>
 
-      <button id="logout-btn" class="logout-btn" type="button">Logout</button>
-    </div>    
+      <button id="logout-btn" class="logout-btn" type="button"><i class="fa-solid fa-right-from-bracket"></i> Logout</button>   
+   </div>    
   </header>
 
   <main class="app-main">
 
     <!-- ── Create Project (visible right after login) ── -->
     <section class="setup-form" id="project-form-section">
-      <h3>Create Project</h3>
+      <h3><i class="fa-solid fa-folder-plus"></i> Create Project</h3>
       <form id="add-project-form" novalidate>
         <div class="form-group">
           <label for="project-name">Project Name</label>
@@ -139,7 +139,7 @@
 
       <!-- Manual Add -->
       <div class="setup-form manual-add-form-card">
-        <h3>Add Task Manually</h3>
+        <h3><i class="fa-solid fa-plus"></i> Add Task Manually</h3>
         <form id="add-task-form" class="add-task-form" novalidate>
           <div class="form-group grow">
             <label for="task-title">Title</label>
@@ -176,12 +176,11 @@
 
     </section>
 
-    <!-- ── Command bar ── -->
-    <section class="command-bar" aria-label="Search and sort controls">
+<!-- ── Search bar ── -->
+    <section class="command-bar search-bar" aria-label="Search controls">
 
-      <!-- Search Line -->
       <div class="command-line">
-        <span class="prompt">&gt;</span>
+        <span class="prompt"><i class="fa-solid fa-magnifying-glass"></i></span>
 
         <input
           type="text"
@@ -199,9 +198,15 @@
         <button type="button" id="clear-search-btn" class="term-btn ghost">clear</button>
       </div>
 
-      <!-- Sort Line -->
+      <p id="search-result-msg" class="search-result-msg"></p>
+
+    </section>
+
+    <!-- ── Sort bar ── -->
+    <section class="command-bar sort-bar" aria-label="Sort controls">
+
       <div class="command-line">
-        <span class="prompt">sort</span>
+        <span class="prompt"> <i class="fa-solid fa-sort"></i> sort</span>
 
         <div class="algo-toggle" role="group" aria-label="Sort field">
           <button type="button" class="sort-btn active" data-sort="unsorted">unsorted</button>
@@ -213,8 +218,6 @@
           sorted via <code>insertion_sort()</code>
         </span>
       </div>
-
-      <p id="search-result-msg" class="search-result-msg"></p>
 
     </section>
 
@@ -256,6 +259,52 @@
     </section>
 
   </main>
+
+  <!-- ── Edit Task Modal ── -->
+    <div id="modal-overlay" class="modal-overlay" hidden>
+
+      <div id="edit-task-modal" class="modal-card" hidden>
+        <button type="button" class="modal-close" id="edit-modal-close"><i class="fa-solid fa-xmark"></i></button>
+        <h3>Edit Task</h3>
+        <form id="edit-task-form" novalidate>
+          <div class="form-group">
+            <label for="edit-task-title">Title</label>
+            <input type="text" id="edit-task-title" />
+          </div>
+          <div class="form-group">
+            <label for="edit-task-due-date">Due</label>
+            <input type="text" id="edit-task-due-date" placeholder="tomorrow" />
+          </div>
+          <div class="form-group">
+            <label for="edit-task-priority">Priority</label>
+            <select id="edit-task-priority">
+              <option value="low">Low</option>
+              <option value="medium">Medium</option>
+              <option value="high">High</option>
+            </select>
+          </div>
+          <div class="modal-actions">
+            <button type="button" class="modal-btn cancel-btn" id="edit-modal-cancel">Cancel</button>
+            <button type="submit" class="modal-btn save-btn">Save Changes</button>
+          </div>
+          <p id="edit-task-msg" class="form-feedback-msg"></p>
+        </form>
+      </div>
+
+      <!-- ── Delete Confirmation Modal ── -->
+      <div id="delete-confirm-modal" class="modal-card" hidden>
+        <button type="button" class="modal-close" id="delete-modal-close"><i class="fa-solid fa-xmark"></i></button>
+        <h3>Delete Task?</h3>
+        <p id="delete-confirm-text" class="modal-text"></p>
+        <div class="modal-actions">
+          <button type="button" class="modal-btn cancel-btn" id="delete-modal-cancel">Cancel</button>
+          <button type="button" class="modal-btn confirm-delete-btn" id="delete-modal-confirm">Delete</button>
+        </div>
+      </div>
+
+    </div>
+
+
   </div>
   <!-- closes #app-content -->
 
