@@ -11,8 +11,8 @@ DATABASE_URL: str = os.getenv("DATABASE_URL", "sqlite:///./taskflow.db")
 # runs with this off, falling back to the mock parser automatically
 USE_REAL_LLM: bool = os.getenv("USE_REAL_LLM", "false").lower() == "true"
 
-# Grok (xAI) API key — only used if USE_REAL_LLM is True
-GROK_API_KEY: str = os.getenv("GROK_API_KEY", "")
+# Groq (xAI) API key — only used if USE_REAL_LLM is True
+GROQ_API_KEY: str = os.getenv("GROQ_API_KEY", "")
 
 # JWT settings for authentication
 SECRET_KEY: str = os.getenv("SECRET_KEY", "change-this-in-production")
