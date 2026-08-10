@@ -9,7 +9,7 @@ from backend.crud import project as project_crud
 from backend.models.task import Task
 from backend.models.user import User
 from backend.auth.dependencies import get_current_user
-from backend.config import USE_REAL_LLM, GROK_API_KEY
+from backend.config import USE_REAL_LLM, GROQ_API_KEY
 
 router = APIRouter(prefix="/tasks", tags=["ai-quick-add"])
 
@@ -28,7 +28,7 @@ def quick_add_task(
 
     prompt = build_quick_add_prompt(payload.description)
 
-    if USE_REAL_LLM and GROK_API_KEY:
+    if USE_REAL_LLM and GROQ_API_KEY:
         from backend.ai.llm_parser import parse_with_real_llm
         parsed = parse_with_real_llm(payload.description)
     else:
