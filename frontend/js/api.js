@@ -1,4 +1,4 @@
-const API_BASE_URL = "http://127.0.0.1:8000";
+const API_BASE_URL = "https://taskflow-backend-ht6u.onrender.com";
 
 // Builds headers with the Authorization token attached, if logged in
 function authHeaders() {

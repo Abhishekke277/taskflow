@@ -21,7 +21,7 @@ app.add_middleware(LoggingMiddleware)
 # on port 5500, this is correct. Change the port if yours differs.
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://127.0.0.1:3000", "http://localhost:3000"],
+    allow_origins=["*"],  # Allow all origins only for development; 
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "DELETE"],
     allow_headers=["Content-Type", "Authorization"],
