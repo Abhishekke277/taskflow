@@ -8,7 +8,7 @@ An internal task-and-project management platform built for Blinkit's dark-store 
 
 1. Clone the repository and navigate into it:
 ```bash
-   git clone <your-repo-url>
+   git clone <my-repo-url>
    cd taskflow
 ```
 
