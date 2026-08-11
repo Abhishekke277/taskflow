@@ -21,7 +21,7 @@ app.add_middleware(LoggingMiddleware)
 # on port 5500, this is correct. Change the port if yours differs.
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://127.0.0.1:3000", "http://localhost:3000" , "https://taskflow-backend1.netlify.app/" ],  # Update this to my frontend's actual origin; 
+    allow_origins=["http://127.0.0.1:3000", "http://localhost:3000" , "https://taskflow-backend1.netlify.app" ],  # Update this to my frontend's actual origin; 
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "DELETE"],
     allow_headers=["Content-Type", "Authorization"],
