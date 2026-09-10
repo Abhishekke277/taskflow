@@ -56,13 +56,21 @@ function loginSuccess(data) {
 
 signinForm.addEventListener("submit", async (event) => {
   event.preventDefault();
+
   const email = document.getElementById("signin-email").value.trim();
   const password = document.getElementById("signin-password").value;
 
   if (!email || !password) {
-    showAuthMessage(signinMsg, "Email and password are required.", "error");
+    showAuthMessage(
+      signinMsg,
+      "Email and password are required.",
+      "error"
+    );
     return;
   }
+
+  // Spinner ON after clicking the button
+  setButtonLoading(signinSubmitBtn, true);
 
   try {
     const response = await fetch(`${API_BASE_URL}/auth/login`, {
@@ -72,31 +80,60 @@ signinForm.addEventListener("submit", async (event) => {
     });
 
     if (!response.ok) {
-      showAuthMessage(signinMsg, "Incorrect email or password.", "error");
+      const errorBody = await response.json().catch(() => ({}));
+
+      showAuthMessage(
+        signinMsg,
+        formatErrorDetail(formatErrorDetail(errorBody.detail)) ||
+          "Incorrect email or password.",
+        "error"
+      );
+
       return;
     }
 
-    
     const data = await response.json();
+
     signinForm.reset();
+
     showAuthMessage(signinMsg, "Signed in!", "success");
+
     loginSuccess(data);
+
   } catch (err) {
     console.error("Login failed:", err);
-    showAuthMessage(signinMsg, "Network error — check console.", "error");
+
+    showAuthMessage(
+      signinMsg,
+      "Network error — check console.",
+      "error"
+    );
+
+  } finally {
+    // Spinner OFF whether success or error
+    setButtonLoading(signinSubmitBtn, false);
   }
 });
 
+
 registerForm.addEventListener("submit", async (event) => {
   event.preventDefault();
+
   const name = document.getElementById("register-name").value.trim();
   const email = document.getElementById("register-email").value.trim();
   const password = document.getElementById("register-password").value;
 
   if (!name || !email || !password) {
-    showAuthMessage(registerMsg, "All fields are required.", "error");
+    showAuthMessage(
+      registerMsg,
+      "All fields are required.",
+      "error"
+    );
     return;
   }
+
+  // Spinner ON after clicking the button
+  setButtonLoading(registerSubmitBtn, true);
 
   try {
     const response = await fetch(`${API_BASE_URL}/auth/register`, {
@@ -107,19 +144,43 @@ registerForm.addEventListener("submit", async (event) => {
 
     if (!response.ok) {
       const errorBody = await response.json().catch(() => ({}));
-      showAuthMessage(registerMsg, errorBody.detail || "Registration failed.", "error");
+
+      showAuthMessage(
+        registerMsg,
+        formatErrorDetail(errorBody.detail) || "Registration failed.",
+        "error"
+      );
+
       return;
     }
 
     const data = await response.json();
+
     registerForm.reset();
-    showAuthMessage(registerMsg, "Account created!", "success");
+
+    showAuthMessage(
+      registerMsg,
+      "Account created!",
+      "success"
+    );
+
     loginSuccess(data);
+
   } catch (err) {
     console.error("Registration failed:", err);
-    showAuthMessage(registerMsg, "Network error — check console.", "error");
+
+    showAuthMessage(
+      registerMsg,
+      "Network error — check console.",
+      "error"
+    );
+
+  } finally {
+    // Spinner OFF whether success or error
+    setButtonLoading(registerSubmitBtn, false);
   }
 });
+
 
 const existingToken = localStorage.getItem("taskflow_token");
 if (existingToken) {
@@ -245,6 +306,28 @@ let activeAlgo = "binary";
 let viewMode = "list";
 let sortBy = "none";
 let searchedTask = null;
+
+//for fill currect email
+function formatErrorDetail(detail) {
+  if (!detail) return null;
+  if (typeof detail === "string") return detail;
+  if (Array.isArray(detail)) {
+    return detail.map((err) => err.msg || JSON.stringify(err)).join(" | ");
+  }
+  return JSON.stringify(detail);
+}
+
+// spinner logic for auth forms
+const signinSubmitBtn = document.getElementById("signin-submit-btn");
+const registerSubmitBtn = document.getElementById("register-submit-btn");
+
+function setButtonLoading(button, isLoading) {
+  const textEl = button.querySelector(".btn-text");
+  const spinnerEl = button.querySelector(".btn-spinner");
+  button.disabled = isLoading;
+  textEl.hidden = isLoading;
+  spinnerEl.hidden = !isLoading;
+}
 
 // ── Task card builders ──
 function buildListCard(task) {
@@ -691,7 +774,7 @@ quickAddForm.addEventListener("submit", async (event) => {
 
     if (!response.ok) {
       const errorBody = await response.json().catch(() => ({}));
-      throw new Error(errorBody.detail || "Failed to quick-add task");
+      throw new Error(formatErrorDetail(errorBody.detail) || "Failed to quick-add task");
     }
 
     await loadTasks();

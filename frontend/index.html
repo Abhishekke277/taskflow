@@ -22,7 +22,8 @@
 
       <div class="auth-tabs">
         <button type="button" id="tab-signin" class="auth-tab active"><i class="fa-solid fa-right-to-bracket"></i> Sign In</button>
-        <button type="button" id="tab-register" class="auth-tab"><i class="fa-solid fa-user-plus"></i> Register</button>      </div>
+        <button type="button" id="tab-register" class="auth-tab"><i class="fa-solid fa-user-plus"></i> Register</button>     
+       </div>
 
       <!-- Sign In form -->
       <form id="signin-form" class="auth-form" novalidate>
@@ -40,7 +41,12 @@
             </button>
           </div>
         </div>
-        <button type="submit" class="create_btn auth-submit-btn">Sign In</button>
+
+        <button type="submit" class="create_btn auth-submit-btn" id="signin-submit-btn">
+          <span class="btn-text">Sign In</span>
+          <span class="btn-spinner" hidden></span>
+        </button>
+
         <p id="signin-msg" class="form-feedback-msg"></p>
       </form>
 
@@ -48,7 +54,7 @@
       <form id="register-form" class="auth-form" novalidate hidden>
         <div class="form-group">
           <label for="register-name"><i class="fa-solid fa-user"></i> Username</label>
-          <input type="text" id="register-name" placeholder="Priya Sharma" />
+          <input type="text" id="register-name" placeholder="john_doe" />
         </div>
         <div class="form-group">
           <label for="register-email"><i class="fa-solid fa-envelope"></i> Email</label>
@@ -64,7 +70,11 @@
             </button>
           </div>
         </div>
-        <button type="submit" class="create_btn auth-submit-btn">Create Account</button>
+
+        <button type="submit" class="create_btn auth-submit-btn" id="register-submit-btn">
+          <span class="btn-text">Create Account</span>
+          <span class="btn-spinner" hidden></span>
+        </button>        
         <p id="register-msg" class="form-feedback-msg"></p>
       </form>
     </div>

@@ -12,11 +12,19 @@ def parse_task_description(description: str) -> dict:
     # ── Step b: Priority ──
     # Group (i) keywords — checked first, "high" wins if present
     high_keywords = ["urgent", "asap"]
+
     # Group (ii) keywords — checked second
     low_keywords = ["whenever", "low priority"]
 
-    matched_high = [kw for kw in high_keywords if kw in lowered] #outputs a list of all the keywords from high_keywords that are found in the lowered description. If any of these keywords are present, it indicates that the task has a high priority.
-    matched_low = [kw for kw in low_keywords if kw in lowered] #outputs a list of all the keywords from low_keywords that are found in the lowered description. If any of these keywords are present, it indicates that the task has a low priority.
+    matched_high = [
+        kw for kw in high_keywords
+        if kw in lowered
+    ]
+
+    matched_low = [
+        kw for kw in low_keywords
+        if kw in lowered
+    ]
 
     if matched_high:
         priority = "high"
@@ -26,34 +34,90 @@ def parse_task_description(description: str) -> dict:
         priority = "medium"
 
     # ── Step c: Due-date hint ──
-    # Checked in this exact order: today, tomorrow, next week,
-    # then "next <weekday>" (Mon-Sun), then bare weekday (Mon-Sun)
+    # Checked in this exact order:
+    # today, tomorrow,
+    # 1 day to 20 days,
+    # next week,
+    # next <weekday>,
+    # bare weekday
+
     due_date_hint = None
     matched_date_phrase = None
 
-    simple_date_keywords = ["today", "tomorrow", "next week"]
+    # Simple date keywords
+    simple_date_keywords = [
+        "today",
+        "tomorrow",
+        "next week",
+    ]
+
     for keyword in simple_date_keywords:
         if keyword in lowered:
             due_date_hint = keyword
             matched_date_phrase = keyword
             break
 
+    # 1 day to 20 days
+    if due_date_hint is None:
+        day_phrases = [
+            "1 day",
+            "2 days",
+            "3 days",
+            "4 days",
+            "5 days",
+            "6 days",
+            "7 days",
+            "8 days",
+            "9 days",
+            "10 days",
+            "11 days",
+            "12 days",
+            "13 days",
+            "14 days",
+            "15 days",
+            "16 days",
+            "17 days",
+            "18 days",
+            "19 days",
+            "20 days",
+        ]
+
+        for phrase in day_phrases:
+            if phrase in lowered:
+                due_date_hint = phrase
+                matched_date_phrase = phrase
+                break
+
+    # Next weekday phrases
     if due_date_hint is None:
         next_weekday_phrases = [
-            "next monday", "next tuesday", "next wednesday", "next thursday",
-            "next friday", "next saturday", "next sunday",
+            "next monday",
+            "next tuesday",
+            "next wednesday",
+            "next thursday",
+            "next friday",
+            "next saturday",
+            "next sunday",
         ]
+
         for phrase in next_weekday_phrases:
             if phrase in lowered:
                 due_date_hint = phrase
                 matched_date_phrase = phrase
                 break
 
+    # Bare weekdays
     if due_date_hint is None:
         bare_weekdays = [
-            "monday", "tuesday", "wednesday", "thursday",
-            "friday", "saturday", "sunday",
+            "monday",
+            "tuesday",
+            "wednesday",
+            "thursday",
+            "friday",
+            "saturday",
+            "sunday",
         ]
+
         for day in bare_weekdays:
             if day in lowered:
                 due_date_hint = day
@@ -61,17 +125,23 @@ def parse_task_description(description: str) -> dict:
                 break
 
     # ── Step d: Title ──
-    # Remove every occurrence of every group (i)/(ii) keyword found,
+    # Remove every occurrence of every priority keyword found,
     # plus every occurrence of the matched date phrase (if any),
-    # from the ORIGINAL-cased description. Case-insensitive removal.
+    # from the ORIGINAL-cased description.
+    # Matching is case-insensitive.
+
     title = original_description
 
     all_priority_keywords_found = matched_high + matched_low
+
     for keyword in all_priority_keywords_found:
         title = _remove_case_insensitive(title, keyword)
 
     if matched_date_phrase:
-        title = _remove_case_insensitive(title, matched_date_phrase)
+        title = _remove_case_insensitive(
+            title,
+            matched_date_phrase
+        )
 
     title = title.strip()
 
@@ -88,9 +158,15 @@ def parse_task_description(description: str) -> dict:
 def _remove_case_insensitive(text: str, phrase: str) -> str:
     """
     Removes every occurrence of `phrase` from `text`, matching
-    case-insensitively but preserving the original casing of
-    the surrounding text that isn't removed.
+    case-insensitively but preserving the original casing of the
+    surrounding text that isn't removed.
     """
     import re
-    pattern = re.compile(re.escape(phrase), re.IGNORECASE)
+
+    pattern = re.compile(
+        re.escape(phrase),
+        re.IGNORECASE
+    )
+
     return pattern.sub("", text)
+
