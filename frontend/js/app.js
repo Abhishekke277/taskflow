@@ -54,6 +54,10 @@ function loginSuccess(data) {
   loadProjectsIntoDropdown();
 }
 
+// ── Auth form button references (needed by submit listeners below) ──
+const signinSubmitBtn = document.getElementById("signin-submit-btn");
+const registerSubmitBtn = document.getElementById("register-submit-btn");
+
 signinForm.addEventListener("submit", async (event) => {
   event.preventDefault();
 
@@ -301,6 +305,13 @@ const laneCounts = {
   low: document.getElementById("count-low"),
 };
 
+// ── Dashboard action button references ──
+const createProjectBtn  = document.getElementById("create-project-btn");
+const addTaskBtn        = document.getElementById("add-task-btn");
+const quickAddBtn       = document.getElementById("quick-add-btn");
+const editSaveBtn       = document.getElementById("edit-save-btn");
+const deleteConfirmBtn  = document.getElementById("delete-modal-confirm");
+
 let currentTasks = [];
 let activeAlgo = "binary";
 let viewMode = "list";
@@ -317,16 +328,58 @@ function formatErrorDetail(detail) {
   return JSON.stringify(detail);
 }
 
-// spinner logic for auth forms
-const signinSubmitBtn = document.getElementById("signin-submit-btn");
-const registerSubmitBtn = document.getElementById("register-submit-btn");
+// ── Loading helpers ──────────────────────────────────────────────────────────
 
-function setButtonLoading(button, isLoading) {
-  const textEl = button.querySelector(".btn-text");
+/**
+ * Low-level toggle: shows/hides the spinner inside `button` and disables it.
+ * Works for any button that contains <span class="btn-text"> and
+ * <span class="btn-spinner"> children (the auth buttons and all dashboard
+ * action buttons share this same structure after the HTML update).
+ *
+ * Optionally locks a parent container so adjacent controls cannot be clicked
+ * while the request is in flight.
+ *
+ * @param {HTMLButtonElement} button      - The button to guard.
+ * @param {boolean}           isLoading   - true = spinner on, false = restore.
+ * @param {HTMLElement|null}  [container] - Optional parent to set pointer-events:none.
+ */
+function setButtonLoading(button, isLoading, container = null) {
+  const textEl    = button.querySelector(".btn-text");
   const spinnerEl = button.querySelector(".btn-spinner");
-  button.disabled = isLoading;
-  textEl.hidden = isLoading;
-  spinnerEl.hidden = !isLoading;
+
+  button.disabled  = isLoading;
+  if (textEl)    textEl.hidden    = isLoading;
+  if (spinnerEl) spinnerEl.hidden = !isLoading;
+
+  if (container) {
+    container.style.pointerEvents = isLoading ? "none" : "";
+  }
+}
+
+/**
+ * Higher-order async wrapper — the preferred way to guard any dashboard button.
+ *
+ * Usage:
+ *   await withLoading(myBtn, async () => {
+ *     await someAPICall();
+ *   }, optionalContainerEl);
+ *
+ * • Calls setButtonLoading(true) before the work starts.
+ * • Calls setButtonLoading(false) in a mandatory `finally` block so the button
+ *   is always re-enabled, even if the async function throws.
+ * • Re-throws the error so each call-site can still show its own error message.
+ *
+ * @param {HTMLButtonElement} button
+ * @param {() => Promise<any>} asyncFn
+ * @param {HTMLElement|null}  [container]
+ */
+async function withLoading(button, asyncFn, container = null) {
+  setButtonLoading(button, true, container);
+  try {
+    await asyncFn();
+  } finally {
+    setButtonLoading(button, false, container);
+  }
 }
 
 // ── Task card builders ──
@@ -365,20 +418,28 @@ function buildListCard(task) {
   const actions = document.createElement("div");
   actions.className = "flat-task-actions";
 
-  const editBtn = document.createElement("button");
-  editBtn.textContent = "Edit";
-  editBtn.className = "flat-edit-btn";
+  // Helper: create a card button with spinner markup
+  function makeCardBtn(label, className) {
+    const btn = document.createElement("button");
+    btn.className = className;
+    const textSpan = document.createElement("span");
+    textSpan.className = "btn-text";
+    textSpan.textContent = label;
+    const spinnerSpan = document.createElement("span");
+    spinnerSpan.className = "btn-spinner";
+    spinnerSpan.hidden = true;
+    btn.appendChild(textSpan);
+    btn.appendChild(spinnerSpan);
+    return btn;
+  }
+
+  const editBtn = makeCardBtn("Edit", "flat-edit-btn");
   editBtn.addEventListener("click", () => handleEditTask(task));
 
-  const toggleBtn = document.createElement("button");
-  toggleBtn.textContent = task.completed ? "↺ Undo" : "✓ Complete";
-  toggleBtn.className = "flat-toggle-btn";
-  toggleBtn.addEventListener("click", () => handleToggleComplete(task));
+  const toggleBtn = makeCardBtn(task.completed ? "↺ Undo" : "✓ Complete", "flat-toggle-btn");
+  toggleBtn.addEventListener("click", () => handleToggleComplete(task, toggleBtn));
 
-
-  const deleteBtn = document.createElement("button");
-  deleteBtn.textContent = "Delete";
-  deleteBtn.className = "flat-delete-btn";
+  const deleteBtn = makeCardBtn("Delete", "flat-delete-btn");
   deleteBtn.addEventListener("click", () => handleDeleteTask(task.id));
 
   actions.appendChild(editBtn);
@@ -417,20 +478,28 @@ function buildLaneCard(task) {
   const actions = document.createElement("div");
   actions.className = "task-actions";
 
-  const editBtn = document.createElement("button");
-  editBtn.textContent = "edit";
-  editBtn.className = "edit-btn";
+  // Helper: create a lane card button with spinner markup
+  function makeCardBtn(label, className) {
+    const btn = document.createElement("button");
+    btn.className = className;
+    const textSpan = document.createElement("span");
+    textSpan.className = "btn-text";
+    textSpan.textContent = label;
+    const spinnerSpan = document.createElement("span");
+    spinnerSpan.className = "btn-spinner";
+    spinnerSpan.hidden = true;
+    btn.appendChild(textSpan);
+    btn.appendChild(spinnerSpan);
+    return btn;
+  }
+
+  const editBtn = makeCardBtn("edit", "edit-btn");
   editBtn.addEventListener("click", () => handleEditTask(task));
 
-  const toggleBtn = document.createElement("button");
-  toggleBtn.textContent = task.completed ? "↺ Undo" : "✓ Complete";
-  toggleBtn.className = "toggle-btn";
-  toggleBtn.addEventListener("click", () => handleToggleComplete(task));
-  actions.appendChild(toggleBtn);
+  const toggleBtn = makeCardBtn(task.completed ? "↺ Undo" : "✓ Complete", "toggle-btn");
+  toggleBtn.addEventListener("click", () => handleToggleComplete(task, toggleBtn));
 
-  const deleteBtn = document.createElement("button");
-  deleteBtn.textContent = "delete";
-  deleteBtn.className = "delete-btn";
+  const deleteBtn = makeCardBtn("delete", "delete-btn");
   deleteBtn.addEventListener("click", () => handleDeleteTask(task.id));
 
   actions.appendChild(editBtn);
@@ -541,7 +610,13 @@ sortButtons.forEach((btn) => {
       if (unsortedBtn) unsortedBtn.classList.remove("active");
     }
 
-    await loadTasks();
+    // Disable all sort buttons while loading to prevent duplicate requests
+    sortButtons.forEach((b) => (b.disabled = true));
+    try {
+      await loadTasks();
+    } finally {
+      sortButtons.forEach((b) => (b.disabled = false));
+    }
   });
 });
 
@@ -572,24 +647,26 @@ searchBtn.addEventListener("click", async () => {
   searchResultMsg.textContent = `searching (${activeAlgo})...`;
   searchResultMsg.className = "search-result-msg";
 
-  try {
-    const result = await searchTaskByTitle(title, activeAlgo);
-    if (result.found) {
-      searchedTask = result.task;
-      showTemporarySearchMessage(
-        `found: #${String(result.task.id).padStart(3, "0")} "${result.task.title}" via ${activeAlgo}_search`,
-        "success"
-      );
-      renderCurrentView();
-    } else {
-      searchedTask = null;
-      showTemporarySearchMessage(`no exact match for "${title}"`, "error");
-      renderFlatList([]);
+  await withLoading(searchBtn, async () => {
+    try {
+      const result = await searchTaskByTitle(title, activeAlgo);
+      if (result.found) {
+        searchedTask = result.task;
+        showTemporarySearchMessage(
+          `found: #${String(result.task.id).padStart(3, "0")} "${result.task.title}" via ${activeAlgo}_search`,
+          "success"
+        );
+        renderCurrentView();
+      } else {
+        searchedTask = null;
+        showTemporarySearchMessage(`no exact match for "${title}"`, "error");
+        renderFlatList([]);
+      }
+    } catch (err) {
+      console.error("Search failed:", err);
+      showTemporarySearchMessage("search failed — check console", "error");
     }
-  } catch (err) {
-    console.error("Search failed:", err);
-    showTemporarySearchMessage("search failed — check console", "error");
-  }
+  });
 });
 
 searchInput.addEventListener("input", () => {
@@ -670,24 +747,28 @@ addProjectForm.addEventListener("submit", async (event) => {
     return;
   }
 
-  try {
-    const response = await fetch(`${API_BASE_URL}/projects/`, {
-      method: "POST",
-      headers: authHeaders(),
-      body: JSON.stringify({ name }),
-    });
+  const projectFormCard = document.getElementById("project-form-section");
 
-    if (response.ok || response.status === 201) {
-      showTemporaryMessage("Project created successfully!", "success");
-      addProjectForm.reset();
-      await loadProjectsIntoDropdown();
-    } else {
+  await withLoading(createProjectBtn, async () => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/projects/`, {
+        method: "POST",
+        headers: authHeaders(),
+        body: JSON.stringify({ name }),
+      });
+
+      if (response.ok || response.status === 201) {
+        showTemporaryMessage("Project created successfully!", "success");
+        addProjectForm.reset();
+        await loadProjectsIntoDropdown();
+      } else {
+        showTemporaryMessage("Failed to create project.", "error");
+      }
+    } catch (err) {
+      console.error("Failed to create project:", err);
       showTemporaryMessage("Failed to create project.", "error");
     }
-  } catch (err) {
-    console.error("Failed to create project:", err);
-    showTemporaryMessage("Failed to create project.", "error");
-  }
+  }, projectFormCard);
 });
 
 // ── Add task manually ──
@@ -724,16 +805,20 @@ addTaskForm.addEventListener("submit", async (event) => {
     project_id: projectId,
   };
 
-  try {
-    await createTaskAPI(newTaskData);
-    await loadTasks();
-    addTaskForm.reset();
-    priorityInput.value = "medium";
-    showTemporaryMessage("Task added successfully!", "success");
-  } catch (err) {
-    console.error("Failed to create task:", err);
-    showTemporaryMessage("Failed to create task. Check the console.", "error");
-  }
+  const manualFormCard = document.querySelector(".manual-add-form-card");
+
+  await withLoading(addTaskBtn, async () => {
+    try {
+      await createTaskAPI(newTaskData);
+      await loadTasks();
+      addTaskForm.reset();
+      priorityInput.value = "medium";
+      showTemporaryMessage("Task added successfully!", "success");
+    } catch (err) {
+      console.error("Failed to create task:", err);
+      showTemporaryMessage("Failed to create task. Check the console.", "error");
+    }
+  }, manualFormCard);
 });
 
 titleInput.addEventListener("input", () => {
@@ -765,25 +850,29 @@ quickAddForm.addEventListener("submit", async (event) => {
     return;
   }
 
-  try {
-    const response = await fetch(`${API_BASE_URL}/tasks/quick-add`, {
-      method: "POST",
-      headers: authHeaders(),
-      body: JSON.stringify({ description, project_id: projectId }),
-    });
+  const quickAddCard = document.querySelector(".quick-add-form-card");
 
-    if (!response.ok) {
-      const errorBody = await response.json().catch(() => ({}));
-      throw new Error(formatErrorDetail(errorBody.detail) || "Failed to quick-add task");
+  await withLoading(quickAddBtn, async () => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/tasks/quick-add`, {
+        method: "POST",
+        headers: authHeaders(),
+        body: JSON.stringify({ description, project_id: projectId }),
+      });
+
+      if (!response.ok) {
+        const errorBody = await response.json().catch(() => ({}));
+        throw new Error(formatErrorDetail(errorBody.detail) || "Failed to quick-add task");
+      }
+
+      await loadTasks();
+      quickAddForm.reset();
+      showTemporaryMessage("Task added via AI!", "success");
+    } catch (err) {
+      console.error("Quick-add failed:", err);
+      showTemporaryMessage("Failed to add task via AI.", "error");
     }
-
-    await loadTasks();
-    quickAddForm.reset();
-    showTemporaryMessage("Task added via AI!", "success");
-  } catch (err) {
-    console.error("Quick-add failed:", err);
-    showTemporaryMessage("Failed to add task via AI.", "error");
-  }
+  }, quickAddCard);
 });
 
 // ── Edit / delete / toggle completion ──
@@ -834,29 +923,33 @@ editTaskForm.addEventListener("submit", async (event) => {
     return;
   }
 
-  try {
-    await updateTaskAPI(taskBeingEdited.id, {
-      title: newTitle,
-      due_date: editTaskDueDateInput.value.trim() || null,
-      priority: editTaskPriorityInput.value,
-    });
-    await loadTasks();
-    closeAllModals();
-  } catch (err) {
-    console.error("Failed to update task:", err);
-    editTaskMsg.textContent = "Failed to update task.";
-    editTaskMsg.className = "form-feedback-msg error";
-  }
+  await withLoading(editSaveBtn, async () => {
+    try {
+      await updateTaskAPI(taskBeingEdited.id, {
+        title: newTitle,
+        due_date: editTaskDueDateInput.value.trim() || null,
+        priority: editTaskPriorityInput.value,
+      });
+      await loadTasks();
+      closeAllModals();
+    } catch (err) {
+      console.error("Failed to update task:", err);
+      editTaskMsg.textContent = "Failed to update task.";
+      editTaskMsg.className = "form-feedback-msg error";
+    }
+  }, editTaskModal);
 });
 
-async function handleToggleComplete(task) {
-  try {
-    await updateTaskAPI(task.id, { completed: !task.completed });
-    await loadTasks();
-  } catch (err) {
-    console.error("Failed to toggle task completion:", err);
-    alert("Failed to update task status.");
-  }
+async function handleToggleComplete(task, buttonEl) {
+  await withLoading(buttonEl, async () => {
+    try {
+      await updateTaskAPI(task.id, { completed: !task.completed });
+      await loadTasks();
+    } catch (err) {
+      console.error("Failed to toggle task completion:", err);
+      alert("Failed to update task status.");
+    }
+  });
 }
 
 
@@ -874,14 +967,16 @@ document.getElementById("delete-modal-close").addEventListener("click", closeAll
 document.getElementById("delete-modal-cancel").addEventListener("click", closeAllModals);
 
 document.getElementById("delete-modal-confirm").addEventListener("click", async () => {
-  try {
-    await deleteTaskAPI(taskIdBeingDeleted);
-    await loadTasks();
-    closeAllModals();
-  } catch (err) {
-    console.error("Failed to delete task:", err);
-    alert("Failed to delete task.");
-  }
+  await withLoading(deleteConfirmBtn, async () => {
+    try {
+      await deleteTaskAPI(taskIdBeingDeleted);
+      await loadTasks();
+      closeAllModals();
+    } catch (err) {
+      console.error("Failed to delete task:", err);
+      alert("Failed to delete task.");
+    }
+  }, deleteConfirmModal);
 });
 
 
