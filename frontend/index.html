@@ -120,7 +120,10 @@
           <label for="project-name">Project Name</label>
           <input type="text" id="project-name" name="name" placeholder="e.g. Dark Store Ops" />
         </div>
-        <button type="submit" class="create_btn">Create Project</button>
+        <button type="submit" class="create_btn" id="create-project-btn">
+          <span class="btn-text">Create Project</span>
+          <span class="btn-spinner" hidden></span>
+        </button>
         <p id="project-form-msg" class="form-feedback-msg"></p>
       </form>
     </section>
@@ -142,7 +145,10 @@
               <option value="">Select...</option>
             </select>
           </div>
-          <button type="submit" class="create_btn">Add with AI</button>
+          <button type="submit" class="create_btn" id="quick-add-btn">
+            <span class="btn-text">Add with AI</span>
+            <span class="btn-spinner" hidden></span>
+          </button>
           <p id="quick-add-msg" class="form-feedback-msg"></p>
         </form>
       </div>
@@ -178,7 +184,10 @@
           </div>
 
           <div class="form-group button-group">
-            <button type="submit" class="create_btn">Add Task</button>
+            <button type="submit" class="create_btn" id="add-task-btn">
+              <span class="btn-text">Add Task</span>
+              <span class="btn-spinner" hidden></span>
+            </button>
           </div>
           <p id="task-form-msg" class="form-feedback-msg full-width-msg"></p>
         </form>
@@ -204,7 +213,10 @@
           <button type="button" class="algo-btn" data-algo="linear">linear</button>
         </div>
 
-        <button type="button" id="search-btn" class="term-btn">run search</button>
+        <button type="button" id="search-btn" class="term-btn">
+          <span class="btn-text">run search</span>
+          <span class="btn-spinner" hidden></span>
+        </button>
         <button type="button" id="clear-search-btn" class="term-btn ghost">clear</button>
       </div>
 
@@ -295,7 +307,10 @@
           </div>
           <div class="modal-actions">
             <button type="button" class="modal-btn cancel-btn" id="edit-modal-cancel">Cancel</button>
-            <button type="submit" class="modal-btn save-btn">Save Changes</button>
+            <button type="submit" class="modal-btn save-btn" id="edit-save-btn">
+              <span class="btn-text">Save Changes</span>
+              <span class="btn-spinner" hidden></span>
+            </button>
           </div>
           <p id="edit-task-msg" class="form-feedback-msg"></p>
         </form>
@@ -308,7 +323,10 @@
         <p id="delete-confirm-text" class="modal-text"></p>
         <div class="modal-actions">
           <button type="button" class="modal-btn cancel-btn" id="delete-modal-cancel">Cancel</button>
-          <button type="button" class="modal-btn confirm-delete-btn" id="delete-modal-confirm">Delete</button>
+          <button type="button" class="modal-btn confirm-delete-btn" id="delete-modal-confirm">
+            <span class="btn-text">Delete</span>
+            <span class="btn-spinner" hidden></span>
+          </button>
         </div>
       </div>
 

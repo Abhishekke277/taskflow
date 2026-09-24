@@ -1112,16 +1112,22 @@ input::-webkit-credentials-auto-fill-button {
   color: var(--accent);
 }
 
-/* spinner */
+/* ───────────────────────────────
+   Spinner & Loading States
+─────────────────────────────── */
 
+/* The spinning ring — shared by auth buttons and every dashboard button */
 .btn-spinner {
   display: inline-block;
-  width: 16px;
-  height: 16px;
-  border: 2px solid rgba(255, 255, 255, 0.4);
+  width: 14px;
+  height: 14px;
+  border: 2px solid rgba(255, 255, 255, 0.35);
   border-top-color: #ffffff;
   border-radius: 50%;
   animation: spin 0.7s linear infinite;
+  /* Sit on the same baseline as surrounding text */
+  vertical-align: middle;
+  flex-shrink: 0;
 }
 
 .btn-spinner[hidden] {
@@ -1129,12 +1135,82 @@ input::-webkit-credentials-auto-fill-button {
 }
 
 @keyframes spin {
-  to {
-    transform: rotate(360deg);
-  }
+  to { transform: rotate(360deg); }
 }
 
-.auth-submit-btn:disabled {
-  opacity: 0.7;
+/* Keep spinner + btn-text inline and centred for every button type */
+.create_btn,
+.term-btn,
+.modal-btn,
+.flat-edit-btn,
+.flat-toggle-btn,
+.flat-delete-btn,
+.edit-btn,
+.toggle-btn,
+.delete-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+/* ── Disabled / loading state — universal rules ── */
+
+/* create_btn covers: Add Task, Add with AI, Create Project, auth buttons */
+.create_btn:disabled {
+  opacity: 0.65;
   cursor: not-allowed;
+  pointer-events: none;          /* belt-and-suspenders on top of disabled */
+}
+
+/* term-btn covers: run search */
+.term-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+/* modal-btn covers: Save Changes, Delete confirm */
+.modal-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+/* Flat list card buttons: Edit, ✓ Complete / ↺ Undo, Delete */
+.flat-task-actions button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+/* Lane / kanban card buttons: edit, toggle, delete */
+.task-actions button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+/* Sort buttons lock during loadTasks() */
+.sort-btn:disabled,
+.algo-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+/* ── Container pointer-events lock ──
+   Applied dynamically via JS (container.style.pointerEvents = "none").
+   This block provides a visual hint for any container that gets locked
+   so adjacent inputs also look non-interactive. */
+.setup-form[style*="pointer-events: none"],
+.modal-card[style*="pointer-events: none"] {
+  opacity: 0.85;
+  transition: opacity 0.15s ease;
+}
+
+/* Dark spinner variant for light-coloured buttons (e.g. accent-on-white) */
+.save-btn .btn-spinner {
+  border-color: rgba(15, 23, 42, 0.25);
+  border-top-color: #0F1419;
 }
