@@ -1,4 +1,8 @@
-const API_BASE_URL = "http://127.0.0.1:8000";
+// Agar Netlify (ya koi bhi live domain) par chal raha hai, Render URL use karo
+// Agar localhost par chal raha hai, local backend use karo
+const API_BASE_URL = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1"
+  ? "http://127.0.0.1:8000"
+  : "https://taskflow-backend-ht6u.onrender.com";
 
 // Builds headers with the Authorization token attached, if logged in
 function authHeaders() {
