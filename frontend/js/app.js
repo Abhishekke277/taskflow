@@ -65,58 +65,46 @@ signinForm.addEventListener("submit", async (event) => {
   const password = document.getElementById("signin-password").value;
 
   if (!email || !password) {
-    showAuthMessage(
-      signinMsg,
-      "Email and password are required.",
-      "error"
-    );
+    showAuthMessage(signinMsg, "Email and password are required.", "error");
     return;
   }
 
-  // Spinner ON after clicking the button
-  setButtonLoading(signinSubmitBtn, true);
+  // All sign-in fields + eye-toggle locked while the request is in-flight
+  const signinExtras = [
+    document.getElementById("signin-email"),
+    document.getElementById("signin-password"),
+    signinForm.querySelector(".eye-toggle"),
+  ];
 
-  try {
-    const response = await fetch(`${API_BASE_URL}/auth/login`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email, password }),
-    });
+  await withLoading(signinSubmitBtn, async () => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/auth/login`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password }),
+      });
 
-    if (!response.ok) {
-      const errorBody = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        const errorBody = await response.json().catch(() => ({}));
+        showAuthMessage(
+          signinMsg,
+          formatErrorDetail(formatErrorDetail(errorBody.detail)) ||
+            "Incorrect email or password.",
+          "error"
+        );
+        return;
+      }
 
-      showAuthMessage(
-        signinMsg,
-        formatErrorDetail(formatErrorDetail(errorBody.detail)) ||
-          "Incorrect email or password.",
-        "error"
-      );
+      const data = await response.json();
+      signinForm.reset();
+      showAuthMessage(signinMsg, "Signed in!", "success");
+      loginSuccess(data);
 
-      return;
+    } catch (err) {
+      console.error("Login failed:", err);
+      showAuthMessage(signinMsg, "Network error — check console.", "error");
     }
-
-    const data = await response.json();
-
-    signinForm.reset();
-
-    showAuthMessage(signinMsg, "Signed in!", "success");
-
-    loginSuccess(data);
-
-  } catch (err) {
-    console.error("Login failed:", err);
-
-    showAuthMessage(
-      signinMsg,
-      "Network error — check console.",
-      "error"
-    );
-
-  } finally {
-    // Spinner OFF whether success or error
-    setButtonLoading(signinSubmitBtn, false);
-  }
+  }, signinExtras);
 });
 
 
@@ -128,61 +116,46 @@ registerForm.addEventListener("submit", async (event) => {
   const password = document.getElementById("register-password").value;
 
   if (!name || !email || !password) {
-    showAuthMessage(
-      registerMsg,
-      "All fields are required.",
-      "error"
-    );
+    showAuthMessage(registerMsg, "All fields are required.", "error");
     return;
   }
 
-  // Spinner ON after clicking the button
-  setButtonLoading(registerSubmitBtn, true);
+  // All register fields + eye-toggle locked while the request is in-flight
+  const registerExtras = [
+    document.getElementById("register-name"),
+    document.getElementById("register-email"),
+    document.getElementById("register-password"),
+    registerForm.querySelector(".eye-toggle"),
+  ];
 
-  try {
-    const response = await fetch(`${API_BASE_URL}/auth/register`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name, email, password }),
-    });
+  await withLoading(registerSubmitBtn, async () => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/auth/register`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name, email, password }),
+      });
 
-    if (!response.ok) {
-      const errorBody = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        const errorBody = await response.json().catch(() => ({}));
+        showAuthMessage(
+          registerMsg,
+          formatErrorDetail(errorBody.detail) || "Registration failed.",
+          "error"
+        );
+        return;
+      }
 
-      showAuthMessage(
-        registerMsg,
-        formatErrorDetail(errorBody.detail) || "Registration failed.",
-        "error"
-      );
+      const data = await response.json();
+      registerForm.reset();
+      showAuthMessage(registerMsg, "Account created!", "success");
+      loginSuccess(data);
 
-      return;
+    } catch (err) {
+      console.error("Registration failed:", err);
+      showAuthMessage(registerMsg, "Network error — check console.", "error");
     }
-
-    const data = await response.json();
-
-    registerForm.reset();
-
-    showAuthMessage(
-      registerMsg,
-      "Account created!",
-      "success"
-    );
-
-    loginSuccess(data);
-
-  } catch (err) {
-    console.error("Registration failed:", err);
-
-    showAuthMessage(
-      registerMsg,
-      "Network error — check console.",
-      "error"
-    );
-
-  } finally {
-    // Spinner OFF whether success or error
-    setButtonLoading(registerSubmitBtn, false);
-  }
+  }, registerExtras);
 });
 
 
@@ -343,42 +316,65 @@ function formatErrorDetail(detail) {
  * @param {boolean}           isLoading   - true = spinner on, false = restore.
  * @param {HTMLElement|null}  [container] - Optional parent to set pointer-events:none.
  */
-function setButtonLoading(button, isLoading, container = null) {
+/**
+ * Low-level toggle: shows/hides the spinner inside `button`, disables it,
+ * and disables/re-enables every element in the `extras` array.
+ *
+ * `extras` should be an array of HTMLElement references (inputs, selects,
+ * textareas, buttons) that belong to the same form and must be locked while
+ * the request is in-flight.
+ *
+ * `container` (optional) sets pointer-events:none on a parent element so
+ * accidental clicks on adjacent controls are also swallowed.
+ *
+ * @param {HTMLButtonElement}  button
+ * @param {boolean}            isLoading
+ * @param {HTMLElement[]}      [extras=[]]   - Extra form controls to disable.
+ * @param {HTMLElement|null}   [container=null]
+ */
+function setButtonLoading(button, isLoading, extras = [], container = null) {
+  // --- submit button ---
   const textEl    = button.querySelector(".btn-text");
   const spinnerEl = button.querySelector(".btn-spinner");
 
-  button.disabled  = isLoading;
+  button.disabled = isLoading;
   if (textEl)    textEl.hidden    = isLoading;
   if (spinnerEl) spinnerEl.hidden = !isLoading;
 
+  // --- extra form controls ---
+  for (const el of extras) {
+    if (!el) continue;           // guard against null refs (e.g. missing IDs)
+    el.disabled = isLoading;
+  }
+
+  // --- optional container pointer-events lock ---
   if (container) {
     container.style.pointerEvents = isLoading ? "none" : "";
   }
 }
 
 /**
- * Higher-order async wrapper — the preferred way to guard any dashboard button.
+ * Higher-order async wrapper — the preferred way to guard any form action.
  *
  * Usage:
  *   await withLoading(myBtn, async () => {
  *     await someAPICall();
- *   }, optionalContainerEl);
+ *   }, [inputA, inputB], optionalContainerEl);
  *
- * • Calls setButtonLoading(true) before the work starts.
- * • Calls setButtonLoading(false) in a mandatory `finally` block so the button
- *   is always re-enabled, even if the async function throws.
- * • Re-throws the error so each call-site can still show its own error message.
+ * • Disables the button + every element in `extras` before work starts.
+ * • Re-enables everything in a mandatory `finally` block (success OR error).
  *
- * @param {HTMLButtonElement} button
+ * @param {HTMLButtonElement}  button
  * @param {() => Promise<any>} asyncFn
- * @param {HTMLElement|null}  [container]
+ * @param {HTMLElement[]}      [extras=[]]
+ * @param {HTMLElement|null}   [container=null]
  */
-async function withLoading(button, asyncFn, container = null) {
-  setButtonLoading(button, true, container);
+async function withLoading(button, asyncFn, extras = [], container = null) {
+  setButtonLoading(button, true, extras, container);
   try {
     await asyncFn();
   } finally {
-    setButtonLoading(button, false, container);
+    setButtonLoading(button, false, extras, container);
   }
 }
 
@@ -647,6 +643,13 @@ searchBtn.addEventListener("click", async () => {
   searchResultMsg.textContent = `searching (${activeAlgo})...`;
   searchResultMsg.className = "search-result-msg";
 
+  // Lock the input and both algo-toggle buttons while the request runs.
+  // clearSearchBtn is intentionally left enabled so the user can cancel.
+  const searchExtras = [
+    searchInput,
+    ...Array.from(algoButtons),
+  ];
+
   await withLoading(searchBtn, async () => {
     try {
       const result = await searchTaskByTitle(title, activeAlgo);
@@ -666,7 +669,7 @@ searchBtn.addEventListener("click", async () => {
       console.error("Search failed:", err);
       showTemporarySearchMessage("search failed — check console", "error");
     }
-  });
+  }, searchExtras);
 });
 
 searchInput.addEventListener("input", () => {
@@ -768,7 +771,7 @@ addProjectForm.addEventListener("submit", async (event) => {
       console.error("Failed to create project:", err);
       showTemporaryMessage("Failed to create project.", "error");
     }
-  }, projectFormCard);
+  }, [projectNameInput], projectFormCard);
 });
 
 // ── Add task manually ──
@@ -818,7 +821,7 @@ addTaskForm.addEventListener("submit", async (event) => {
       console.error("Failed to create task:", err);
       showTemporaryMessage("Failed to create task. Check the console.", "error");
     }
-  }, manualFormCard);
+  }, [titleInput, dueDateInput, priorityInput, projectIdInput], manualFormCard);
 });
 
 titleInput.addEventListener("input", () => {
@@ -872,7 +875,7 @@ quickAddForm.addEventListener("submit", async (event) => {
       console.error("Quick-add failed:", err);
       showTemporaryMessage("Failed to add task via AI.", "error");
     }
-  }, quickAddCard);
+  }, [quickAddDescription, quickAddProjectSelect], quickAddCard);
 });
 
 // ── Edit / delete / toggle completion ──
@@ -937,7 +940,12 @@ editTaskForm.addEventListener("submit", async (event) => {
       editTaskMsg.textContent = "Failed to update task.";
       editTaskMsg.className = "form-feedback-msg error";
     }
-  }, editTaskModal);
+  }, [
+    editTaskTitleInput,
+    editTaskDueDateInput,
+    editTaskPriorityInput,
+    document.getElementById("edit-modal-cancel"),
+  ], editTaskModal);
 });
 
 async function handleToggleComplete(task, buttonEl) {
@@ -976,7 +984,10 @@ document.getElementById("delete-modal-confirm").addEventListener("click", async 
       console.error("Failed to delete task:", err);
       alert("Failed to delete task.");
     }
-  }, deleteConfirmModal);
+  }, [
+    document.getElementById("delete-modal-cancel"),
+    document.getElementById("delete-modal-close"),
+  ], deleteConfirmModal);
 });
 
 
