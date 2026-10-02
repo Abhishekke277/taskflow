@@ -1204,9 +1204,11 @@ input::-webkit-credentials-auto-fill-button {
    This block provides a visual hint for any container that gets locked
    so adjacent inputs also look non-interactive. */
 .setup-form[style*="pointer-events: none"],
-.modal-card[style*="pointer-events: none"] {
-  opacity: 0.85;
-  transition: opacity 0.15s ease;
+.modal-card[style*="pointer-events: none"],
+.auth-form[style*="pointer-events: none"] {
+  opacity: 0.55;
+  filter: blur(0.6px);
+  transition: opacity 0.18s ease, filter 0.18s ease;
 }
 
 /* Dark spinner variant for light-coloured buttons (e.g. accent-on-white) */

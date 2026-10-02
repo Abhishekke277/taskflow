@@ -104,7 +104,7 @@ signinForm.addEventListener("submit", async (event) => {
       console.error("Login failed:", err);
       showAuthMessage(signinMsg, "Network error — check console.", "error");
     }
-  }, signinExtras);
+  }, signinExtras, signinForm);
 });
 
 
@@ -155,7 +155,7 @@ registerForm.addEventListener("submit", async (event) => {
       console.error("Registration failed:", err);
       showAuthMessage(registerMsg, "Network error — check console.", "error");
     }
-  }, registerExtras);
+  }, registerExtras, registerForm);
 });
 
 
