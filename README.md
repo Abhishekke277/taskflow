@@ -309,3 +309,15 @@ This repository's commit history includes multiple feature branches (`feature/al
 ```bash
 git log --oneline --graph --all
 ```
+
+## Running Tests
+
+Install the development dependencies:
+
+    pip install -r requirements-dev.txt
+
+Run the test suite:
+
+    pytest
+
+Tests use an in-memory SQLite database, so they never touch the real database.
