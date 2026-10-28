@@ -17,3 +17,7 @@ class Project(Base):
 
     # One project contains many tasks
     tasks = relationship("Task", back_populates="project")
+
+# project = db.query(Project).filter(Project.owner_id == 101).first()
+# print(project.name)  # Output: Project A
+# print(project.owner.name)  # Output: Alice
